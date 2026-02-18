@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Clynic.Domain\Clynic.Domain.csproj" />
+    <ProjectReference Include="..\Clynic.Infrastructure\Clynic.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

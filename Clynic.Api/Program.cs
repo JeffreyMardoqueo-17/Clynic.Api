@@ -1,25 +1,94 @@
+using Microsoft.EntityFrameworkCore;
+using Clynic.Infrastructure.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ========== Configurar servicios ==========
 
+// Entity Framework Core 8.0 con SQL Server
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' not found. Set it via environment variable " +
+        "ConnectionStrings__DefaultConnection or user secrets.");
+}
+builder.Services.AddDbContext<ClynicDbContext>(options =>
+{
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null);
+    });
+
+    // Solo en Development
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
+
+// Controllers y API
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "Clynic API", Version = "v1" });
+});
 
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// ========== Construir aplicación ==========
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ========== Aplicar migraciones automáticamente (solo Development) ==========
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ClynicDbContext>();
+    
+    try
+    {
+        // Aplicar migraciones pendientes
+        if (dbContext.Database.GetPendingMigrations().Any())
+        {
+            app.Logger.LogInformation("Aplicando migraciones pendientes...");
+            dbContext.Database.Migrate();
+        }
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Error al aplicar migraciones");
+    }
 }
 
-app.UseHttpsRedirection();
+// ========== Configurar pipeline HTTP ==========
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Clynic API v1"));
+}
 
+app.UseCors("AllowAll");
 app.UseAuthorization();
-
 app.MapControllers();
 
+// Log de inicio
+app.Logger.LogInformation("🚀 API iniciada en {Environment}", app.Environment.EnvironmentName);
+app.Logger.LogInformation("📊 Swagger disponible en http://localhost:8080/swagger");
+app.Logger.LogInformation("🗄️ Base de datos: {Database}", connectionString?.Split(";").FirstOrDefault(s => s.Contains("Database")));
+
 app.Run();
+

@@ -1,5 +1,16 @@
 <Solution>
+  <Folder Name="/docker/" />
+  <Folder Name="/docs/">
+    <File Path="Structure.md" />
+  </Folder>
+  <Folder Name="/Elementos de la solución/">
+    <File Path=".gitignore" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="Clynic.Api/Clynic.Api.csproj" />
+    <Project Path="Clynic.Application/Clynic.Application.csproj" />
+    <Project Path="Clynic.Domain/Clynic.Domain.csproj" />
+    <Project Path="Clynic.Infrastructure/Clynic.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/" />
 </Solution>
