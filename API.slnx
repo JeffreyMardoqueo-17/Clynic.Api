@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="Clynic.Api/Clynic.Api.csproj" />
+  </Folder>
+</Solution>
