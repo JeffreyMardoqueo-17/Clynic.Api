@@ -13,7 +13,9 @@ namespace Clynic.Domain.Models
         public string Nombre { get; set; } = string.Empty;
         public string Direccion { get; set; } = string.Empty;
         public bool Activa { get; set; } = true;
-        //propiedades de navegacion con clinica
-        public ICollection<Clinica>? Clinicas { get; set; } = new List<Clinica>();
+        public ICollection<HorarioSucursal> Horarios { get; set; }
+            = new List<HorarioSucursal>();
+        public ICollection<Cita> Citas { get; set; }
+            = new List<Cita>();
     }
 }

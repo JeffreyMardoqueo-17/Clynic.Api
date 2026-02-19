@@ -4,8 +4,8 @@ GO
 /* =========================================
    1. CLINICA
 ========================================= */
-CREATE TABLE Clinicas (
-    IdClinica INT IDENTITY PRIMARY KEY,
+CREATE TABLE Clinica (
+    Id INT IDENTITY PRIMARY KEY,
     Nombre NVARCHAR(150) NOT NULL,
     Telefono NVARCHAR(50),
     Direccion NVARCHAR(250),
@@ -26,7 +26,7 @@ CREATE TABLE Sucursal (
 
     CONSTRAINT FK_Sucursal_Clinica
         FOREIGN KEY (IdClinica)
-        REFERENCES Clinicas(IdClinica)
+        REFERENCES Clinica(Id)
 );
 GO
 
@@ -47,7 +47,7 @@ CREATE TABLE Usuario (
 
     CONSTRAINT FK_Usuario_Clinica
         FOREIGN KEY (IdClinica)
-        REFERENCES Clinicas(IdClinica)
+        REFERENCES Clinica(Id)
 );
 GO
 
@@ -138,7 +138,7 @@ GO
    8. CITA SERVICIO (DETALLE)
 ========================================= */
 CREATE TABLE CitaServicio (
-    IdDetalle INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY PRIMARY KEY,
     IdCita INT NOT NULL,
     IdServicio INT NOT NULL,
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Clynic.Domain.Models.Enums;
 
 namespace Clynic.Domain.Models
 {
@@ -11,12 +10,12 @@ namespace Clynic.Domain.Models
         public int IdClinica { get; set; }
         public Clinica? Clinica { get; set; }
         public string NombreCompleto { get; set; } = string.Empty;
-        public string CorreoElectronico { get; set; } = string.Empty;
+        public string Correo { get; set; } = string.Empty;
         public string ClaveHash { get; set; } = string.Empty;
-        public string Rol { get; set; } = string.Empty;
+        public UsuarioRol Rol { get; set; } = UsuarioRol.Admin;
         public bool Activo { get; set; } = true;
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
-        ///propieadades de navegacion con clinica
-        public ICollection<Clinica>? Clinicas { get; set; } = new List<Clinica>();
+        public ICollection<Cita> CitasComoDoctor { get; set; }
+            = new List<Cita>();
     }
 }
