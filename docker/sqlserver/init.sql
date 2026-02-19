@@ -1,12 +1,12 @@
-----------------AQUI ES LO PRIMERO DE LA ABSE DE DATOS
+-- ========== INICIALIZACIÓN DE BASE DE DATOS ==========
 
-PRINT 'Creando base de datos...';
+PRINT 'Creando base de datos ClynicDB...';
 GO
 
-CREATE DATABASE SistemaCitasClinicasSaaS;
+CREATE DATABASE [ClynicDB];
 GO
 
-USE SistemaCitasClinicasSaaS;
+USE [ClynicDB];
 GO
 
 PRINT 'Base de datos creada correctamente.';

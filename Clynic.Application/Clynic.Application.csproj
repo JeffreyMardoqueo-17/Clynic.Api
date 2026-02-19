@@ -8,7 +8,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Clynic.Domain\Clynic.Domain.csproj" />
-    <ProjectReference Include="..\Clynic.Infrastructure\Clynic.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.9.0" />
   </ItemGroup>
 
 </Project>

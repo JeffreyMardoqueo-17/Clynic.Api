@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Clynic.Domain\Clynic.Domain.csproj" />
+    <ProjectReference Include="..\Clynic.Application\Clynic.Application.csproj" />
   </ItemGroup>
 
 </Project>
