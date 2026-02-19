@@ -14,7 +14,7 @@ namespace Clynic.Infrastructure.Data
         }
 
         // ========== DbSets (Tablas) ==========
-        public DbSet<Clinicas> Clinicas { get; set; } = null!;
+        public DbSet<Clinica> Clinicas { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -26,7 +26,7 @@ namespace Clynic.Infrastructure.Data
 
         private void ConfigureClinicas(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Clinicas>(entity =>
+            modelBuilder.Entity<Clinica>(entity =>
             {
                 // Nombre de tabla en SQL Server
                 entity.ToTable("Clinicas");

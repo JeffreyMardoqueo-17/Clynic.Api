@@ -1,5 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using FluentValidation;
 using Clynic.Infrastructure.Data;
+using Clynic.Infrastructure.Repositories;
+using Clynic.Application.Interfaces.Repositories;
+using Clynic.Application.Interfaces.Services;
+using Clynic.Application.Services;
+using Clynic.Application.Rules;
+using Clynic.Application.DTOs.Clinicas;
+using Clynic.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +39,18 @@ builder.Services.AddDbContext<ClynicDbContext>(options =>
     }
 });
 
+// DI - Repositories
+builder.Services.AddScoped<IClinicaRepository, ClinicaRepository>();
+
+// DI - Services
+builder.Services.AddScoped<IClinicaService, ClinicaService>();
+
+// DI - Business Rules
+builder.Services.AddScoped<ClinicaRules>();
+
+// DI - Validators
+builder.Services.AddScoped<IValidator<CreateClinicaDto>, CreateClinicaDtoValidator>();
+
 // Controllers y API
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -61,16 +81,13 @@ if (app.Environment.IsDevelopment())
     
     try
     {
-        // Aplicar migraciones pendientes
-        if (dbContext.Database.GetPendingMigrations().Any())
-        {
-            app.Logger.LogInformation("Aplicando migraciones pendientes...");
-            dbContext.Database.Migrate();
-        }
+        // Crear BD si no existe
+        dbContext.Database.EnsureCreated();
+        app.Logger.LogInformation("✅ Base de datos lista");
     }
     catch (Exception ex)
     {
-        app.Logger.LogError(ex, "Error al aplicar migraciones");
+        app.Logger.LogError(ex, "Error con base de datos");
     }
 }
 
@@ -91,4 +108,3 @@ app.Logger.LogInformation("📊 Swagger disponible en http://localhost:8080/swag
 app.Logger.LogInformation("🗄️ Base de datos: {Database}", connectionString?.Split(";").FirstOrDefault(s => s.Contains("Database")));
 
 app.Run();
-

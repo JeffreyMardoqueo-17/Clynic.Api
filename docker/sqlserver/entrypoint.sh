@@ -1,47 +1,52 @@
 #!/bin/bash
-set -e
 
 echo "=========================================="
 echo "🚀 Iniciando SQL Server 2022"
 echo "=========================================="
 
 # Iniciar SQL Server en background
+echo "⏳ SQL Server iniciando en background..."
 /opt/mssql/bin/sqlservr &
+SERVER_PID=$!
 
-# Esperar 30 segundos a que SQL Server inicie completamente
-echo "⏳ Esperando 30 segundos para que SQL Server inicie..."
+# Esperar a que SQL Server esté listo
+echo "⏳ Esperando a que SQL Server esté disponible..."
 sleep 30
 
-# Usar /opt/mssql-tools18 si existe, sino /opt/mssql-tools
-SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
-if [ ! -f "$SQLCMD" ]; then
-    SQLCMD="/opt/mssql-tools/bin/sqlcmd"
+# Ejecutar scripts SQL en orden específico
+echo "📄 Ejecutando scripts SQL..."
+
+# 1. Crear base de datos
+echo "  [1/3] Ejecutando: init.sql"
+sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -i "/usr/scripts/init.sql"
+if [ $? -eq 0 ]; then
+    echo "    ✅ Base de datos creada"
+else
+    echo "    ⚠️ Error al crear base de datos"
 fi
 
-echo ""
-echo "📦 Creando base de datos..."
-$SQLCMD -S localhost -U sa -P "${SA_PASSWORD}" -C -i /usr/config/init.sql
+# 2. Crear schema y tablas
+echo "  [2/3] Ejecutando: schema.sql"
+sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -i "/usr/scripts/schema.sql"
+if [ $? -eq 0 ]; then
+    echo "    ✅ Schema creado"
+else
+    echo "    ⚠️ Error al crear schema"
+fi
 
-echo ""
-echo "📦 Creando esquema de tablas..."
-$SQLCMD -S localhost -U sa -P "${SA_PASSWORD}" -C -d SistemaCitasClinicasSaaS -i /usr/config/schema.sql
+# 3. Insertar datos
+echo "  [3/3] Ejecutando: seed-data.sql"
+sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -i "/usr/scripts/seed-data.sql"
+if [ $? -eq 0 ]; then
+    echo "    ✅ Datos insertados"
+else
+    echo "    ⚠️ Error al insertar datos"
+fi
 
-echo ""
-echo "📦 Insertando datos iniciales..."
-$SQLCMD -S localhost -U sa -P "${SA_PASSWORD}" -C -d SistemaCitasClinicasSaaS -i /usr/config/seed-data.sql
-
-# Marcar como saludable
-touch /tmp/healthy
-
-echo ""
-echo "=========================================="
 echo "✅ Inicialización completada"
-echo "📊 Base de datos: SistemaCitasClinicasSaaS"
-echo "🔐 Usuario: sa"
-echo "🌐 Puerto: 1433"
-echo "=========================================="
 
-# Mantener el contenedor ejecutándose
-echo ""
-echo "SQL Server está listo para recibir conexiones..."
-wait
+# Mantener SQL Server en foreground
+wait $SERVER_PID
+
+
+
