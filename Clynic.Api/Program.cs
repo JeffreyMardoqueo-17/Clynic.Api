@@ -7,6 +7,7 @@ using Clynic.Application.Interfaces.Services;
 using Clynic.Application.Services;
 using Clynic.Application.Rules;
 using Clynic.Application.DTOs.Clinicas;
+using Clynic.Application.DTOs.Sucursales;
 using Clynic.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,15 +42,19 @@ builder.Services.AddDbContext<ClynicDbContext>(options =>
 
 // DI - Repositories
 builder.Services.AddScoped<IClinicaRepository, ClinicaRepository>();
+builder.Services.AddScoped<ISucursalRepository, SucursalRepository>();
 
 // DI - Services
 builder.Services.AddScoped<IClinicaService, ClinicaService>();
+builder.Services.AddScoped<ISucursalService, SucursalService>();
 
 // DI - Business Rules
 builder.Services.AddScoped<ClinicaRules>();
+builder.Services.AddScoped<SucursalRules>();
 
 // DI - Validators
 builder.Services.AddScoped<IValidator<CreateClinicaDto>, CreateClinicaDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateSucursalDto>, CreateSucursalDtoValidator>();
 
 // Controllers y API
 builder.Services.AddControllers();

@@ -15,6 +15,7 @@ namespace Clynic.Infrastructure.Data
 
         // ========== DbSets (Tablas) ==========
         public DbSet<Clinica> Clinicas { get; set; } = null!;
+        public DbSet<Sucursal> Sucursales { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -22,6 +23,7 @@ namespace Clynic.Infrastructure.Data
 
             // ========== Configuración de entidades ==========
             ConfigureClinicas(modelBuilder);
+            ConfigureSucursales(modelBuilder);
         }
 
         private void ConfigureClinicas(ModelBuilder modelBuilder)
@@ -53,6 +55,36 @@ namespace Clynic.Infrastructure.Data
 
                 entity.Property(e => e.FechaCreacion)
                     .HasDefaultValueSql("GETDATE()");
+            });
+        }
+
+        private void ConfigureSucursales(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Sucursal>(entity =>
+            {
+                entity.ToTable("Sucursal");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdClinica)
+                    .IsRequired();
+
+                entity.Property(e => e.Nombre)
+                    .HasMaxLength(150)
+                    .IsRequired();
+
+                entity.Property(e => e.Direccion)
+                    .HasMaxLength(250)
+                    .IsRequired();
+
+                entity.Property(e => e.Activa)
+                    .HasDefaultValue(true);
+
+                entity.HasOne(e => e.Clinica)
+                    .WithMany()
+                    .HasForeignKey(e => e.IdClinica);
             });
         }
     }

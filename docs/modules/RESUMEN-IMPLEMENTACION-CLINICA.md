@@ -266,7 +266,3 @@ dotnet ef database update --startup-project ../Clynic.Api
 - [x] Documentación de orden de desarrollo creada
 
 ---
-
-**¡Todo está listo para usar!** 🎉
-
-Ahora puedes crear las migraciones y ejecutar la API.
