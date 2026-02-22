@@ -1,7 +1,8 @@
 <Solution>
-  <Folder Name="/docker/" />
   <Folder Name="/docs/">
     <File Path="Structure.md" />
+    <File Path="docs/Test/README.md" />
+    <File Path="docs/Test/BUENAS-PRACTICAS-SOLID-Y-PATRONES.md" />
   </Folder>
   <Folder Name="/Elementos de la solución/">
     <File Path=".gitignore" />
@@ -12,5 +13,10 @@
     <Project Path="Clynic.Domain/Clynic.Domain.csproj" />
     <Project Path="Clynic.Infrastructure/Clynic.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/test/">
+    <Project Path="test/Clynic.Api.Tests/Clynic.Api.Tests.csproj" />
+    <Project Path="test/Clynic.Application.Tests/Clynic.Application.Tests.csproj" />
+    <Project Path="test/Clynic.Domain.Tests/Clynic.Domain.Tests.csproj" />
+    <Project Path="test/Clynic.Infrastructure.Tests/Clynic.Infrastructure.Tests.csproj" />
+  </Folder>
 </Solution>

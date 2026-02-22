@@ -1,0 +1,167 @@
+using FluentValidation;
+using Clynic.Application.DTOs.Usuarios;
+using Clynic.Application.Interfaces.Repositories;
+using Clynic.Application.Interfaces.Services;
+using Clynic.Application.Rules;
+using Clynic.Domain.Models;
+
+namespace Clynic.Application.Services
+{
+    public class AuthService : IAuthService
+    {
+        private readonly IUsuarioRepository _usuarioRepository;
+        private readonly IClinicaRepository _clinicaRepository;
+        private readonly IPasswordHasher _passwordHasher;
+        private readonly IJwtService _jwtService;
+        private readonly IValidator<RegisterDto> _registerValidator;
+        private readonly IValidator<LoginDto> _loginValidator;
+        private readonly UsuarioRules _usuarioRules;
+
+        public AuthService(
+            IUsuarioRepository usuarioRepository,
+            IClinicaRepository clinicaRepository,
+            IPasswordHasher passwordHasher,
+            IJwtService jwtService,
+            IValidator<RegisterDto> registerValidator,
+            IValidator<LoginDto> loginValidator,
+            UsuarioRules usuarioRules)
+        {
+            _usuarioRepository = usuarioRepository ?? throw new ArgumentNullException(nameof(usuarioRepository));
+            _clinicaRepository = clinicaRepository ?? throw new ArgumentNullException(nameof(clinicaRepository));
+            _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
+            _jwtService = jwtService ?? throw new ArgumentNullException(nameof(jwtService));
+            _registerValidator = registerValidator ?? throw new ArgumentNullException(nameof(registerValidator));
+            _loginValidator = loginValidator ?? throw new ArgumentNullException(nameof(loginValidator));
+            _usuarioRules = usuarioRules ?? throw new ArgumentNullException(nameof(usuarioRules));
+        }
+
+        public async Task<AuthResponseDto> RegistrarAsync(RegisterDto registerDto)
+        {
+            if (registerDto == null)
+                throw new ArgumentNullException(nameof(registerDto));
+
+            var validationResult = await _registerValidator.ValidateAsync(registerDto);
+            if (!validationResult.IsValid)
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage))
+                };
+            }
+
+            if (!await _usuarioRules.CorreoEsUnicoAsync(registerDto.Correo))
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "Ya existe un usuario con este correo electrónico"
+                };
+            }
+
+            if (!await _usuarioRules.ClinicaExisteAsync(registerDto.IdClinica))
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "La clínica especificada no existe"
+                };
+            }
+
+            var usuario = new Usuario
+            {
+                NombreCompleto = registerDto.NombreCompleto.Trim(),
+                Correo = registerDto.Correo.Trim().ToLower(),
+                ClaveHash = _passwordHasher.Hash(registerDto.Clave),
+                Rol = registerDto.Rol,
+                IdClinica = registerDto.IdClinica,
+                Activo = true,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+            var usuarioCreado = await _usuarioRepository.CrearAsync(usuario);
+
+            var token = _jwtService.GenerarToken(usuarioCreado);
+
+            return new AuthResponseDto
+            {
+                Exito = true,
+                Mensaje = "Usuario registrado exitosamente",
+                Token = token,
+                Expiracion = _jwtService.ObtenerFechaExpiracion(),
+                Usuario = MapToResponseDto(usuarioCreado)
+            };
+        }
+
+        public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
+        {
+            if (loginDto == null)
+                throw new ArgumentNullException(nameof(loginDto));
+
+            var validationResult = await _loginValidator.ValidateAsync(loginDto);
+            if (!validationResult.IsValid)
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage))
+                };
+            }
+
+            var usuario = await _usuarioRepository.ObtenerPorCorreoAsync(loginDto.Correo.Trim().ToLower());
+
+            if (usuario == null)
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "Credenciales inválidas"
+                };
+            }
+
+            if (!usuario.Activo)
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "El usuario está desactivado"
+                };
+            }
+
+            if (!_passwordHasher.Verify(loginDto.Clave, usuario.ClaveHash))
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "Credenciales inválidas"
+                };
+            }
+
+            var token = _jwtService.GenerarToken(usuario);
+
+            return new AuthResponseDto
+            {
+                Exito = true,
+                Mensaje = "Login exitoso",
+                Token = token,
+                Expiracion = _jwtService.ObtenerFechaExpiracion(),
+                Usuario = MapToResponseDto(usuario)
+            };
+        }
+
+        private static UsuarioResponseDto MapToResponseDto(Usuario usuario)
+        {
+            return new UsuarioResponseDto
+            {
+                Id = usuario.Id,
+                NombreCompleto = usuario.NombreCompleto,
+                Correo = usuario.Correo,
+                Rol = usuario.Rol,
+                Activo = usuario.Activo,
+                IdClinica = usuario.IdClinica,
+                NombreClinica = usuario.Clinica?.Nombre,
+                FechaCreacion = usuario.FechaCreacion
+            };
+        }
+    }
+}

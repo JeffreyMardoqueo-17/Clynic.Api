@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Clynic.Application.DTOs.Sucursales;
 using Clynic.Application.Interfaces.Services;
-using FluentValidation;
 
 namespace Clynic.Api.Controllers
 {
@@ -14,14 +13,11 @@ namespace Clynic.Api.Controllers
     public class SucursalesController : ControllerBase
     {
         private readonly ISucursalService _sucursalService;
-        private readonly ILogger<SucursalesController> _logger;
 
         public SucursalesController(
-            ISucursalService sucursalService,
-            ILogger<SucursalesController> logger)
+            ISucursalService sucursalService)
         {
             _sucursalService = sucursalService ?? throw new ArgumentNullException(nameof(sucursalService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>
@@ -35,16 +31,8 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<SucursalResponseDto>>> ObtenerTodas()
         {
-            try
-            {
-                var sucursales = await _sucursalService.ObtenerTodasAsync();
-                return Ok(sucursales);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener todas las sucursales");
-                return StatusCode(500, new { mensaje = "Error al obtener las sucursales", detalle = ex.Message });
-            }
+            var sucursales = await _sucursalService.ObtenerTodasAsync();
+            return Ok(sucursales);
         }
 
         /// <summary>
@@ -63,27 +51,19 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<SucursalResponseDto>> ObtenerPorId(int id)
         {
-            try
+            if (id <= 0)
             {
-                if (id <= 0)
-                {
-                    return BadRequest(new { mensaje = "El ID debe ser mayor a cero" });
-                }
-
-                var sucursal = await _sucursalService.ObtenerPorIdAsync(id);
-
-                if (sucursal == null)
-                {
-                    return NotFound(new { mensaje = $"No se encontro la sucursal con ID {id}" });
-                }
-
-                return Ok(sucursal);
+                return BadRequest(new { mensaje = "El ID debe ser mayor a cero" });
             }
-            catch (Exception ex)
+
+            var sucursal = await _sucursalService.ObtenerPorIdAsync(id);
+
+            if (sucursal == null)
             {
-                _logger.LogError(ex, "Error al obtener la sucursal con ID {Id}", id);
-                return StatusCode(500, new { mensaje = "Error al obtener la sucursal", detalle = ex.Message });
+                return NotFound(new { mensaje = $"No se encontro la sucursal con ID {id}" });
             }
+
+            return Ok(sucursal);
         }
 
         /// <summary>
@@ -100,30 +80,17 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<SucursalResponseDto>> Crear([FromBody] CreateSucursalDto createDto)
         {
-            try
+            if (createDto == null)
             {
-                if (createDto == null)
-                {
-                    return BadRequest(new { mensaje = "Los datos de la sucursal son requeridos" });
-                }
+                return BadRequest(new { mensaje = "Los datos de la sucursal son requeridos" });
+            }
 
-                var sucursalCreada = await _sucursalService.CrearAsync(createDto);
+            var sucursalCreada = await _sucursalService.CrearAsync(createDto);
 
-                return CreatedAtAction(
-                    nameof(ObtenerPorId),
-                    new { id = sucursalCreada.Id },
-                    sucursalCreada);
-            }
-            catch (ValidationException ex)
-            {
-                _logger.LogWarning(ex, "Error de validacion al crear sucursal");
-                return BadRequest(new { mensaje = "Errores de validacion", errores = ex.Errors.Select(e => e.ErrorMessage) });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al crear la sucursal");
-                return StatusCode(500, new { mensaje = "Error al crear la sucursal", detalle = ex.Message });
-            }
+            return CreatedAtAction(
+                nameof(ObtenerPorId),
+                new { id = sucursalCreada.Id },
+                sucursalCreada);
         }
     }
 }

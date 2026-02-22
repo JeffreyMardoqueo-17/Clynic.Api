@@ -5,7 +5,7 @@ PRINT 'Insertando datos semilla...';
 GO
 
 /* Insertar Clínicas */
-INSERT INTO Clinicas (Nombre, Telefono, Direccion, Activa, FechaCreacion)
+INSERT INTO Clinica (Nombre, Telefono, Direccion, Activa, FechaCreacion)
 VALUES 
     ('Clínica Central', '123-456-7890', 'Av. Principal 100', 1, GETDATE()),
     ('Clínica Norte', '123-456-7891', 'Calle Norte 200', 1, GETDATE()),

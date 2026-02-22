@@ -152,3 +152,33 @@ CREATE TABLE CitaServicio (
         FOREIGN KEY (IdServicio) REFERENCES Servicio(Id)
 );
 GO
+
+/* =========================================
+   9. CODIGO VERIFICACION
+========================================= */
+CREATE TABLE CodigoVerificacion (
+    Id INT IDENTITY PRIMARY KEY,
+    IdUsuario INT NOT NULL,
+
+    Codigo NVARCHAR(12) NOT NULL,
+    Tipo NVARCHAR(50) NOT NULL,
+
+    FechaCreacion DATETIME DEFAULT GETDATE(),
+    FechaExpiracion DATETIME NOT NULL,
+    
+    Usado BIT DEFAULT 0,
+    FechaUso DATETIME NULL,
+
+    CONSTRAINT FK_CodigoVerificacion_Usuario
+        FOREIGN KEY (IdUsuario)
+        REFERENCES Usuario(Id)
+        ON DELETE CASCADE
+);
+GO
+
+/* =========================================
+   10. INDICES PARA CODIGO VERIFICACION
+========================================= */
+CREATE INDEX IX_CodigoVerificacion_IdUsuario ON CodigoVerificacion(IdUsuario);
+CREATE INDEX IX_CodigoVerificacion_Codigo ON CodigoVerificacion(Codigo);
+GO

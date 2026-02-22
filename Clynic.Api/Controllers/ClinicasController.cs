@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Clynic.Application.DTOs.Clinicas;
 using Clynic.Application.Interfaces.Services;
-using FluentValidation;
 
 namespace Clynic.Api.Controllers
 {
@@ -14,14 +13,11 @@ namespace Clynic.Api.Controllers
     public class ClinicasController : ControllerBase
     {
         private readonly IClinicaService _clinicaService;
-        private readonly ILogger<ClinicasController> _logger;
 
         public ClinicasController(
-            IClinicaService clinicaService,
-            ILogger<ClinicasController> logger)
+            IClinicaService clinicaService)
         {
             _clinicaService = clinicaService ?? throw new ArgumentNullException(nameof(clinicaService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>
@@ -35,16 +31,8 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<ClinicaResponseDto>>> ObtenerTodas()
         {
-            try
-            {
-                var clinicas = await _clinicaService.ObtenerTodasAsync();
-                return Ok(clinicas);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener todas las clínicas");
-                return StatusCode(500, new { mensaje = "Error al obtener las clínicas", detalle = ex.Message });
-            }
+            var clinicas = await _clinicaService.ObtenerTodasAsync();
+            return Ok(clinicas);
         }
 
         /// <summary>
@@ -63,27 +51,19 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ClinicaResponseDto>> ObtenerPorId(int id)
         {
-            try
+            if (id <= 0)
             {
-                if (id <= 0)
-                {
-                    return BadRequest(new { mensaje = "El ID debe ser mayor a cero" });
-                }
-
-                var clinica = await _clinicaService.ObtenerPorIdAsync(id);
-
-                if (clinica == null)
-                {
-                    return NotFound(new { mensaje = $"No se encontró la clínica con ID {id}" });
-                }
-
-                return Ok(clinica);
+                return BadRequest(new { mensaje = "El ID debe ser mayor a cero" });
             }
-            catch (Exception ex)
+
+            var clinica = await _clinicaService.ObtenerPorIdAsync(id);
+
+            if (clinica == null)
             {
-                _logger.LogError(ex, "Error al obtener la clínica con ID {Id}", id);
-                return StatusCode(500, new { mensaje = "Error al obtener la clínica", detalle = ex.Message });
+                return NotFound(new { mensaje = $"No se encontró la clínica con ID {id}" });
             }
+
+            return Ok(clinica);
         }
 
         /// <summary>
@@ -100,30 +80,17 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ClinicaResponseDto>> Crear([FromBody] CreateClinicaDto createDto)
         {
-            try
+            if (createDto == null)
             {
-                if (createDto == null)
-                {
-                    return BadRequest(new { mensaje = "Los datos de la clínica son requeridos" });
-                }
+                return BadRequest(new { mensaje = "Los datos de la clínica son requeridos" });
+            }
 
-                var clinicaCreada = await _clinicaService.CrearAsync(createDto);
+            var clinicaCreada = await _clinicaService.CrearAsync(createDto);
 
-                return CreatedAtAction(
-                    nameof(ObtenerPorId),
-                    new { id = clinicaCreada.Id },
-                    clinicaCreada);
-            }
-            catch (ValidationException ex)
-            {
-                _logger.LogWarning(ex, "Error de validación al crear clínica");
-                return BadRequest(new { mensaje = "Errores de validación", errores = ex.Errors.Select(e => e.ErrorMessage) });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al crear la clínica");
-                return StatusCode(500, new { mensaje = "Error al crear la clínica", detalle = ex.Message });
-            }
+            return CreatedAtAction(
+                nameof(ObtenerPorId),
+                new { id = clinicaCreada.Id },
+                clinicaCreada);
         }
     }
 }
