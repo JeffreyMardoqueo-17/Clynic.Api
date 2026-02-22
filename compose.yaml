@@ -1,5 +1,4 @@
 services:
-
   sqlserver:
     container_name: clynic-sql
     build:
@@ -7,9 +6,9 @@ services:
       dockerfile: docker/sqlserver/Dockerfile
 
     environment:
-      SA_PASSWORD: "${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}"
 
     ports:
       - "${DB_PORT:-1433}:1433"
@@ -21,12 +20,11 @@ services:
       - clynic-network
 
     healthcheck:
-      test: ["CMD", "ps", "aux"]
+      test: ["CMD-SHELL", "/usr/local/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 50s
-
 
   api:
     container_name: clynic-api
@@ -38,8 +36,16 @@ services:
       - "${API_PORT:-8080}:8080"
 
     environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=${SQL_DATABASE};User Id=${SQL_USER};Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true;
-      - ASPNETCORE_ENVIRONMENT=Development
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__ExpirationHours=${JWT_EXPIRATION_HOURS}
+      - Email__Host=${EMAIL_HOST}
+      - Email__Port=${EMAIL_PORT}
+      - Email__Sender=${EMAIL_SENDER}
+      - Email__Password=${EMAIL_PASSWORD}
 
     depends_on:
       sqlserver:
@@ -49,7 +55,6 @@ services:
       - clynic-network
 
     restart: on-failure
-
 
 volumes:
   sql_data:

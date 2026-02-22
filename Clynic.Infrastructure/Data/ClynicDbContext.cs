@@ -23,6 +23,7 @@ namespace Clynic.Infrastructure.Data
         public DbSet<HorarioSucursal> HorariosSucursal { get; set; } = null!;
         public DbSet<Cita> Citas { get; set; } = null!;
         public DbSet<CitaServicio> CitasServicio { get; set; } = null!;
+        public DbSet<CodigoVerificacion> CodigosVerificacion { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -37,6 +38,7 @@ namespace Clynic.Infrastructure.Data
             ConfigureHorariosSucursal(modelBuilder);
             ConfigureCitas(modelBuilder);
             ConfigureCitasServicio(modelBuilder);
+            ConfigureCodigosVerificacion(modelBuilder);
         }
 
         private void ConfigureClinicas(ModelBuilder modelBuilder)
@@ -313,6 +315,45 @@ namespace Clynic.Infrastructure.Data
 
                 entity.Property(e => e.Precio)
                     .HasColumnType("decimal(10,2)");
+            });
+        }
+
+        private void ConfigureCodigosVerificacion(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CodigoVerificacion>(entity =>
+            {
+                entity.ToTable("CodigoVerificacion");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdUsuario)
+                    .IsRequired();
+
+                entity.Property(e => e.Codigo)
+                    .HasMaxLength(12)
+                    .IsRequired();
+
+                entity.Property(e => e.Tipo)
+                    .HasConversion(
+                        v => v.ToString(),
+                        v => (TipoCodigo)Enum.Parse(typeof(TipoCodigo), v))
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.FechaExpiracion)
+                    .IsRequired();
+
+                entity.Property(e => e.Usado)
+                    .HasDefaultValue(false);
+
+                entity.HasOne(e => e.Usuario)
+                    .WithMany()
+                    .HasForeignKey(e => e.IdUsuario)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
