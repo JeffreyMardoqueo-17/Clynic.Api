@@ -6,11 +6,12 @@ using Clynic.Domain.Models;
 namespace Clynic.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("/[controller]")]
     [Produces("application/json")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly IWebHostEnvironment _env;
         private readonly IUsuarioService _usuarioService;
         private readonly IEmailService _emailService;
         private readonly IVerificationCodeService _verificationCodeService;
@@ -21,13 +22,15 @@ namespace Clynic.Api.Controllers
             IUsuarioService usuarioService,
             IEmailService emailService,
             IVerificationCodeService verificationCodeService,
-            IPasswordHasher passwordHasher)
+            IPasswordHasher passwordHasher,
+            IWebHostEnvironment env)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _usuarioService = usuarioService ?? throw new ArgumentNullException(nameof(usuarioService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _verificationCodeService = verificationCodeService ?? throw new ArgumentNullException(nameof(verificationCodeService));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
+            _env = env ?? throw new ArgumentNullException(nameof(env));
         }
 
         [HttpPost("register")]
@@ -55,10 +58,12 @@ namespace Clynic.Api.Controllers
             return Ok(resultado);
         }
 
+        // ==========================
+        // LOGIN
+        // ==========================
         [HttpPost("login")]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
         {
             if (loginDto == null)
@@ -79,7 +84,6 @@ namespace Clynic.Api.Controllers
 
             return Ok(resultado);
         }
-
         [HttpPost("forgot-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
