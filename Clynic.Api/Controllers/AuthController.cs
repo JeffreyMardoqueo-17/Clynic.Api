@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Clynic.Application.DTOs.Usuarios;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Domain.Models;
+using System.Security.Claims;
 
 namespace Clynic.Api.Controllers
 {
@@ -55,6 +57,8 @@ namespace Clynic.Api.Controllers
                 return BadRequest(resultado);
             }
 
+            SetAuthCookie(resultado);
+
             return Ok(resultado);
         }
 
@@ -81,6 +85,8 @@ namespace Clynic.Api.Controllers
             {
                 return Unauthorized(resultado);
             }
+
+            SetAuthCookie(resultado);
 
             return Ok(resultado);
         }
@@ -166,6 +172,50 @@ namespace Clynic.Api.Controllers
             await _usuarioService.ActualizarClaveAsync(usuario.Id, nuevaClaveHash);
 
             return Ok(new { mensaje = "Contraseña actualizada exitosamente" });
+        }
+
+        [HttpGet("me")]
+        // [Authorize]
+        [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<UsuarioResponseDto>> Me()
+        {
+            var usuarioIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(usuarioIdClaim, out var usuarioId) || usuarioId <= 0)
+                return Unauthorized(new { mensaje = "Token inválido" });
+
+            try
+            {
+                var perfil = await _usuarioService.ObtenerPerfilAsync(usuarioId);
+                return Ok(perfil);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { mensaje = "Usuario no encontrado" });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { mensaje = "Usuario inactivo" });
+            }
+        }
+
+        private void SetAuthCookie(AuthResponseDto authResult)
+        {
+            if (string.IsNullOrWhiteSpace(authResult.Token))
+                return;
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Expires = authResult.Expiracion ?? DateTime.UtcNow.AddHours(24)
+            };
+
+            Response.Cookies.Append("clynic_access_token", authResult.Token, cookieOptions);
         }
     }
 }

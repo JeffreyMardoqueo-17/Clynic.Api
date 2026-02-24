@@ -7,6 +7,7 @@ namespace Clynic.Application.Interfaces.Services
     {
         Task<IEnumerable<UsuarioResponseDto>> ObtenerTodosAsync();
         Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaAsync(int idClinica);
+        Task<UsuarioResponseDto> ObtenerPerfilAsync(int idUsuario);
         Task<UsuarioResponseDto?> ObtenerPorIdAsync(int id);
         Task<UsuarioResponseDto?> ObtenerPorCorreoAsync(string correo);
         Task<UsuarioResponseDto> CrearAsync(RegisterDto createDto);

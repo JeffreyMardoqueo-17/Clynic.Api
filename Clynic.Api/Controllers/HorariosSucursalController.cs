@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     /// Controller para gestionar la configuracion de horarios por sucursal
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("/[controller]")]
     [Produces("application/json")]
     public class HorariosSucursalController : ControllerBase
     {

@@ -82,11 +82,14 @@ namespace Clynic.Application.Services
             var usuarioCreado = await _usuarioRepository.CrearAsync(usuario);
 
             var token = _jwtService.GenerarToken(usuarioCreado);
+            var expiracion = _jwtService.ObtenerFechaExpiracion();
 
             return new AuthResponseDto
             {
                 Exito = true,
                 Mensaje = "Usuario registrado exitosamente",
+                Token = token,
+                Expiracion = expiracion,
                 Usuario = MapToResponseDto(usuarioCreado)
             };
         }
@@ -128,11 +131,14 @@ namespace Clynic.Application.Services
             }
 
             var token = _jwtService.GenerarToken(usuario);
+            var expiracion = _jwtService.ObtenerFechaExpiracion();
 
             return new AuthResponseDto
             {
                 Exito = true,
                 Mensaje = "Login exitoso",
+                Token = token,
+                Expiracion = expiracion,
                 Usuario = MapToResponseDto(usuario)
             };
         }
