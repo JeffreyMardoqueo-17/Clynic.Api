@@ -5,7 +5,7 @@ GO
    1. CLINICA
 ========================================= */
 CREATE TABLE Clinica (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     Nombre NVARCHAR(150) NOT NULL,
     Telefono NVARCHAR(50),
     Direccion NVARCHAR(250),
@@ -18,7 +18,7 @@ GO
    2. SUCURSAL
 ========================================= */
 CREATE TABLE Sucursal (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     IdClinica INT NOT NULL,
     Nombre NVARCHAR(150),
     Direccion NVARCHAR(250),
@@ -34,7 +34,7 @@ GO
    3. USUARIO
 ========================================= */
 CREATE TABLE Usuario (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     IdClinica INT NOT NULL,
 
     NombreCompleto NVARCHAR(150),
@@ -55,7 +55,7 @@ GO
    4. PACIENTE
 ========================================= */
 CREATE TABLE Paciente (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     NombreCompleto NVARCHAR(150),
     Telefono NVARCHAR(50),
     FechaRegistro DATETIME DEFAULT GETDATE()
@@ -66,7 +66,7 @@ GO
    5. SERVICIO
 ========================================= */
 CREATE TABLE Servicio (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     IdClinica INT NOT NULL,
 
     NombreServicio NVARCHAR(150),
@@ -84,7 +84,7 @@ GO
    6. HORARIO SUCURSAL
 ========================================= */
 CREATE TABLE HorarioSucursal (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     IdSucursal INT NOT NULL,
 
     DiaSemana INT,
@@ -101,7 +101,7 @@ GO
    7. CITA
 ========================================= */
 CREATE TABLE Cita (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
 
     IdClinica INT NOT NULL,
     IdSucursal INT NOT NULL,
@@ -138,7 +138,7 @@ GO
    8. CITA SERVICIO (DETALLE)
 ========================================= */
 CREATE TABLE CitaServicio (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     IdCita INT NOT NULL,
     IdServicio INT NOT NULL,
 
@@ -157,7 +157,7 @@ GO
    9. CODIGO VERIFICACION
 ========================================= */
 CREATE TABLE CodigoVerificacion (
-    Id INT IDENTITY PRIMARY KEY,
+    Id INT IDENTITY(1,1) PRIMARY KEY,
     IdUsuario INT NOT NULL,
 
     Codigo NVARCHAR(12) NOT NULL,

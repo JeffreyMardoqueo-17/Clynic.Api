@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     /// Controller para gestionar las Sucursales
     /// </summary>
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("/[controller]")]
     [Produces("application/json")]
     public class SucursalesController : ControllerBase
     {

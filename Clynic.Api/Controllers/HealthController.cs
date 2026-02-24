@@ -4,7 +4,7 @@ using Clynic.Infrastructure.Data;
 namespace Clynic.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("/[controller]")]
     public class HealthController : ControllerBase
     {
         private readonly ClynicDbContext _dbContext;

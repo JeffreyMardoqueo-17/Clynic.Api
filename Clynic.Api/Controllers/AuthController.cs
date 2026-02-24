@@ -1,16 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Clynic.Application.DTOs.Usuarios;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Domain.Models;
+using System.Security.Claims;
 
 namespace Clynic.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("/[controller]")]
     [Produces("application/json")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly IWebHostEnvironment _env;
         private readonly IUsuarioService _usuarioService;
         private readonly IEmailService _emailService;
         private readonly IVerificationCodeService _verificationCodeService;
@@ -21,13 +24,15 @@ namespace Clynic.Api.Controllers
             IUsuarioService usuarioService,
             IEmailService emailService,
             IVerificationCodeService verificationCodeService,
-            IPasswordHasher passwordHasher)
+            IPasswordHasher passwordHasher,
+            IWebHostEnvironment env)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _usuarioService = usuarioService ?? throw new ArgumentNullException(nameof(usuarioService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _verificationCodeService = verificationCodeService ?? throw new ArgumentNullException(nameof(verificationCodeService));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
+            _env = env ?? throw new ArgumentNullException(nameof(env));
         }
 
         [HttpPost("register")]
@@ -52,13 +57,17 @@ namespace Clynic.Api.Controllers
                 return BadRequest(resultado);
             }
 
+            SetAuthCookie(resultado);
+
             return Ok(resultado);
         }
 
+        // ==========================
+        // LOGIN
+        // ==========================
         [HttpPost("login")]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
         {
             if (loginDto == null)
@@ -77,9 +86,10 @@ namespace Clynic.Api.Controllers
                 return Unauthorized(resultado);
             }
 
+            SetAuthCookie(resultado);
+
             return Ok(resultado);
         }
-
         [HttpPost("forgot-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -162,6 +172,50 @@ namespace Clynic.Api.Controllers
             await _usuarioService.ActualizarClaveAsync(usuario.Id, nuevaClaveHash);
 
             return Ok(new { mensaje = "Contraseña actualizada exitosamente" });
+        }
+
+        [HttpGet("me")]
+        // [Authorize]
+        [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<UsuarioResponseDto>> Me()
+        {
+            var usuarioIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(usuarioIdClaim, out var usuarioId) || usuarioId <= 0)
+                return Unauthorized(new { mensaje = "Token inválido" });
+
+            try
+            {
+                var perfil = await _usuarioService.ObtenerPerfilAsync(usuarioId);
+                return Ok(perfil);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { mensaje = "Usuario no encontrado" });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { mensaje = "Usuario inactivo" });
+            }
+        }
+
+        private void SetAuthCookie(AuthResponseDto authResult)
+        {
+            if (string.IsNullOrWhiteSpace(authResult.Token))
+                return;
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Expires = authResult.Expiracion ?? DateTime.UtcNow.AddHours(24)
+            };
+
+            Response.Cookies.Append("clynic_access_token", authResult.Token, cookieOptions);
         }
     }
 }

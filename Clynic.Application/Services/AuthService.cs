@@ -82,13 +82,14 @@ namespace Clynic.Application.Services
             var usuarioCreado = await _usuarioRepository.CrearAsync(usuario);
 
             var token = _jwtService.GenerarToken(usuarioCreado);
+            var expiracion = _jwtService.ObtenerFechaExpiracion();
 
             return new AuthResponseDto
             {
                 Exito = true,
                 Mensaje = "Usuario registrado exitosamente",
                 Token = token,
-                Expiracion = _jwtService.ObtenerFechaExpiracion(),
+                Expiracion = expiracion,
                 Usuario = MapToResponseDto(usuarioCreado)
             };
         }
@@ -108,9 +109,10 @@ namespace Clynic.Application.Services
                 };
             }
 
-            var usuario = await _usuarioRepository.ObtenerPorCorreoAsync(loginDto.Correo.Trim().ToLower());
+            var usuario = await _usuarioRepository
+                .ObtenerPorCorreoAsync(loginDto.Correo.Trim().ToLower());
 
-            if (usuario == null)
+            if (usuario == null || !_passwordHasher.Verify(loginDto.Clave, usuario.ClaveHash))
             {
                 return new AuthResponseDto
                 {
@@ -128,23 +130,15 @@ namespace Clynic.Application.Services
                 };
             }
 
-            if (!_passwordHasher.Verify(loginDto.Clave, usuario.ClaveHash))
-            {
-                return new AuthResponseDto
-                {
-                    Exito = false,
-                    Mensaje = "Credenciales inválidas"
-                };
-            }
-
             var token = _jwtService.GenerarToken(usuario);
+            var expiracion = _jwtService.ObtenerFechaExpiracion();
 
             return new AuthResponseDto
             {
                 Exito = true,
                 Mensaje = "Login exitoso",
                 Token = token,
-                Expiracion = _jwtService.ObtenerFechaExpiracion(),
+                Expiracion = expiracion,
                 Usuario = MapToResponseDto(usuario)
             };
         }

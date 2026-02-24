@@ -44,6 +44,21 @@ namespace Clynic.Application.Services
             return usuarios.Select(MapToResponseDto);
         }
 
+        public async Task<UsuarioResponseDto> ObtenerPerfilAsync(int idUsuario)
+        {
+            if (idUsuario <= 0)
+                throw new ArgumentException("El ID del usuario autenticado debe ser mayor a cero.", nameof(idUsuario));
+
+            var usuario = await _repository.ObtenerPorIdAsync(idUsuario);
+            if (usuario == null)
+                throw new KeyNotFoundException("Usuario no encontrado");
+
+            if (!usuario.Activo)
+                throw new UnauthorizedAccessException("El usuario está inactivo");
+
+            return MapToResponseDto(usuario);
+        }
+
         public async Task<UsuarioResponseDto?> ObtenerPorIdAsync(int id)
         {
             if (id <= 0)
