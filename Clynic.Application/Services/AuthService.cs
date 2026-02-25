@@ -4,6 +4,7 @@ using Clynic.Application.Interfaces.Repositories;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Application.Rules;
 using Clynic.Domain.Models;
+using Clynic.Domain.Models.Enums;
 
 namespace Clynic.Application.Services
 {
@@ -11,6 +12,7 @@ namespace Clynic.Application.Services
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly IClinicaRepository _clinicaRepository;
+        private readonly IEmailService _emailService;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtService _jwtService;
         private readonly IValidator<RegisterDto> _registerValidator;
@@ -20,6 +22,7 @@ namespace Clynic.Application.Services
         public AuthService(
             IUsuarioRepository usuarioRepository,
             IClinicaRepository clinicaRepository,
+            IEmailService emailService,
             IPasswordHasher passwordHasher,
             IJwtService jwtService,
             IValidator<RegisterDto> registerValidator,
@@ -28,6 +31,7 @@ namespace Clynic.Application.Services
         {
             _usuarioRepository = usuarioRepository ?? throw new ArgumentNullException(nameof(usuarioRepository));
             _clinicaRepository = clinicaRepository ?? throw new ArgumentNullException(nameof(clinicaRepository));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
             _jwtService = jwtService ?? throw new ArgumentNullException(nameof(jwtService));
             _registerValidator = registerValidator ?? throw new ArgumentNullException(nameof(registerValidator));
@@ -68,6 +72,16 @@ namespace Clynic.Application.Services
                 };
             }
 
+            if (registerDto.IdSucursal.HasValue &&
+                !await _usuarioRules.SucursalPerteneceAClinicaAsync(registerDto.IdSucursal.Value, registerDto.IdClinica))
+            {
+                return new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "La sucursal especificada no pertenece a la clínica"
+                };
+            }
+
             var usuario = new Usuario
             {
                 NombreCompleto = registerDto.NombreCompleto.Trim(),
@@ -75,11 +89,22 @@ namespace Clynic.Application.Services
                 ClaveHash = _passwordHasher.Hash(registerDto.Clave),
                 Rol = registerDto.Rol,
                 IdClinica = registerDto.IdClinica,
+                IdSucursal = registerDto.IdSucursal,
                 Activo = true,
+                DebeCambiarClave = registerDto.Rol != UsuarioRol.Admin,
                 FechaCreacion = DateTime.UtcNow
             };
 
             var usuarioCreado = await _usuarioRepository.CrearAsync(usuario);
+
+            var clinica = await _clinicaRepository.ObtenerPorIdAsync(usuarioCreado.IdClinica);
+            var nombreClinica = clinica?.Nombre ?? "Clínica asignada";
+
+            await _emailService.EnviarBienvenidaUsuarioAsync(
+                usuarioCreado.Correo,
+                usuarioCreado.NombreCompleto,
+                nombreClinica,
+                usuarioCreado.Rol.ToString());
 
             var token = _jwtService.GenerarToken(usuarioCreado);
             var expiracion = _jwtService.ObtenerFechaExpiracion();
@@ -152,8 +177,11 @@ namespace Clynic.Application.Services
                 Correo = usuario.Correo,
                 Rol = usuario.Rol,
                 Activo = usuario.Activo,
+                DebeCambiarClave = usuario.DebeCambiarClave,
                 IdClinica = usuario.IdClinica,
                 NombreClinica = usuario.Clinica?.Nombre,
+                IdSucursal = usuario.IdSucursal,
+                NombreSucursal = usuario.Sucursal?.Nombre,
                 FechaCreacion = usuario.FechaCreacion
             };
         }

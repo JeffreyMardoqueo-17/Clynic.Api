@@ -20,13 +20,13 @@ VALUES
     (2, 'Sucursal Principal', 'Av. Principal 200', 1);
 GO
 
-/* Insertar Usuarios */
-INSERT INTO Usuario (IdClinica, NombreCompleto, Correo, ClaveHash, Rol, Activo, FechaCreacion)
-VALUES 
-    (1, 'Administrador General', 'admin@clinica1.com', 'hashed_password_123', 'ADMIN', 1, GETDATE()),
-    (1, 'Dr. Juan Pérez', 'juan@clinica1.com', 'hashed_password_456', 'DOCTOR', 1, GETDATE()),
-    (2, 'Administrador Clínica 2', 'admin@clinica2.com', 'hashed_password_789', 'ADMIN', 1, GETDATE());
-GO
+-- /* Insertar Usuarios */
+-- INSERT INTO Usuario (IdClinica, NombreCompleto, Correo, ClaveHash, Rol, Activo, FechaCreacion)
+-- VALUES 
+--     (1, 'Administrador General', 'admin@clinica1.com', 'hashed_password_123', 'ADMIN', 1, GETDATE()),
+--     (1, 'Dr. Juan Pérez', 'juan@clinica1.com', 'hashed_password_456', 'DOCTOR', 1, GETDATE()),
+--     (2, 'Administrador Clínica 2', 'admin@clinica2.com', 'hashed_password_789', 'ADMIN', 1, GETDATE());
+-- GO
 
 PRINT '✅ Datos semilla insertados correctamente.';
 GO

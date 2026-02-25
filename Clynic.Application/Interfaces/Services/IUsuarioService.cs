@@ -7,10 +7,12 @@ namespace Clynic.Application.Interfaces.Services
     {
         Task<IEnumerable<UsuarioResponseDto>> ObtenerTodosAsync();
         Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaAsync(int idClinica);
+        Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal);
         Task<UsuarioResponseDto> ObtenerPerfilAsync(int idUsuario);
         Task<UsuarioResponseDto?> ObtenerPorIdAsync(int id);
         Task<UsuarioResponseDto?> ObtenerPorCorreoAsync(string correo);
         Task<UsuarioResponseDto> CrearAsync(RegisterDto createDto);
+        Task<UsuarioResponseDto> CrearPorAdminAsync(CreateUsuarioAdminDto createDto);
         Task<UsuarioResponseDto?> ActualizarAsync(int id, UpdateUsuarioDto updateDto);
         Task<bool> EliminarAsync(int id);
         Task<bool> CambiarClaveAsync(int id, ChangePasswordDto changePasswordDto);

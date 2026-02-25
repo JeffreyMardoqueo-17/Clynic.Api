@@ -74,6 +74,7 @@ builder.Services.AddScoped<IValidator<CreateClinicaDto>, CreateClinicaDtoValidat
 builder.Services.AddScoped<IValidator<CreateSucursalDto>, CreateSucursalDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateHorarioSucursalDto>, CreateHorarioSucursalDtoValidator>();
 builder.Services.AddScoped<IValidator<RegisterDto>, RegisterDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateUsuarioAdminDto>, CreateUsuarioAdminDtoValidator>();
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateUsuarioDto>, UpdateUsuarioDtoValidator>();
 builder.Services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordDtoValidator>();

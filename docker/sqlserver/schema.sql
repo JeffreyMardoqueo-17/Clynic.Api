@@ -36,6 +36,7 @@ GO
 CREATE TABLE Usuario (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     IdClinica INT NOT NULL,
+    IdSucursal INT NULL,
 
     NombreCompleto NVARCHAR(150),
     Correo NVARCHAR(150),
@@ -43,11 +44,16 @@ CREATE TABLE Usuario (
     Rol NVARCHAR(50),
 
     Activo BIT DEFAULT 1,
+    DebeCambiarClave BIT DEFAULT 0,
     FechaCreacion DATETIME DEFAULT GETDATE(),
 
     CONSTRAINT FK_Usuario_Clinica
         FOREIGN KEY (IdClinica)
-        REFERENCES Clinica(Id)
+        REFERENCES Clinica(Id),
+
+    CONSTRAINT FK_Usuario_Sucursal
+        FOREIGN KEY (IdSucursal)
+        REFERENCES Sucursal(Id)
 );
 GO
 
@@ -181,4 +187,5 @@ GO
 ========================================= */
 CREATE INDEX IX_CodigoVerificacion_IdUsuario ON CodigoVerificacion(IdUsuario);
 CREATE INDEX IX_CodigoVerificacion_Codigo ON CodigoVerificacion(Codigo);
+CREATE INDEX IX_Usuario_IdSucursal ON Usuario(IdSucursal);
 GO

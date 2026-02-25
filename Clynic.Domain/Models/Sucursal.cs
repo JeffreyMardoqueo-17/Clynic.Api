@@ -13,6 +13,8 @@ namespace Clynic.Domain.Models
         public string Nombre { get; set; } = string.Empty;
         public string Direccion { get; set; } = string.Empty;
         public bool Activa { get; set; } = true;
+        public ICollection<Usuario> Usuarios { get; set; }
+            = new List<Usuario>();
         public ICollection<HorarioSucursal> Horarios { get; set; }
             = new List<HorarioSucursal>();
         public ICollection<Cita> Citas { get; set; }

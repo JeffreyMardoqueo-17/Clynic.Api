@@ -123,6 +123,11 @@ namespace Clynic.Infrastructure.Data
                 entity.HasMany(e => e.Citas)
                     .WithOne(e => e.Sucursal)
                     .HasForeignKey(e => e.IdSucursal);
+
+                entity.HasMany(e => e.Usuarios)
+                    .WithOne(e => e.Sucursal)
+                    .HasForeignKey(e => e.IdSucursal)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
 
@@ -138,6 +143,9 @@ namespace Clynic.Infrastructure.Data
 
                 entity.Property(e => e.IdClinica)
                     .IsRequired();
+
+                entity.Property(e => e.IdSucursal)
+                    .IsRequired(false);
 
                 entity.Property(e => e.NombreCompleto)
                     .HasMaxLength(150);
@@ -156,6 +164,9 @@ namespace Clynic.Infrastructure.Data
 
                 entity.Property(e => e.Activo)
                     .HasDefaultValue(true);
+
+                entity.Property(e => e.DebeCambiarClave)
+                    .HasDefaultValue(false);
 
                 entity.Property(e => e.FechaCreacion)
                     .HasDefaultValueSql("GETDATE()");

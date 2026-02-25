@@ -40,7 +40,31 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<UsuarioResponseDto>>> ObtenerPorClinica(int idClinica)
         {
+            var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
+            if (!int.TryParse(idClinicaClaim, out var idClinicaToken) || idClinicaToken != idClinica)
+            {
+                return Forbid();
+            }
+
             var usuarios = await _usuarioService.ObtenerPorClinicaAsync(idClinica);
+            return Ok(usuarios);
+        }
+
+        [HttpGet("clinica/{idClinica}/sucursal/{idSucursal}")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [ProducesResponseType(typeof(IEnumerable<UsuarioResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<UsuarioResponseDto>>> ObtenerPorClinicaYSucursal(int idClinica, int idSucursal)
+        {
+            var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
+            if (!int.TryParse(idClinicaClaim, out var idClinicaToken) || idClinicaToken != idClinica)
+            {
+                return Forbid();
+            }
+
+            var usuarios = await _usuarioService.ObtenerPorClinicaYSucursalAsync(idClinica, idSucursal);
             return Ok(usuarios);
         }
 
@@ -81,14 +105,20 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<UsuarioResponseDto>> Crear([FromBody] RegisterDto createDto)
+        public async Task<ActionResult<UsuarioResponseDto>> Crear([FromBody] CreateUsuarioAdminDto createDto)
         {
             if (createDto == null)
             {
                 return BadRequest(new { mensaje = "Los datos del usuario son requeridos" });
             }
 
-            var usuarioCreado = await _usuarioService.CrearAsync(createDto);
+            var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
+            if (!int.TryParse(idClinicaClaim, out var idClinicaToken) || idClinicaToken != createDto.IdClinica)
+            {
+                return Forbid();
+            }
+
+            var usuarioCreado = await _usuarioService.CrearPorAdminAsync(createDto);
 
             return CreatedAtAction(
                 nameof(ObtenerPorId),

@@ -97,7 +97,9 @@ namespace Clynic.Api.Middlewares
         {
             return ex switch
             {
-                ValidationException => "Errores de validación.",
+                ValidationException => string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Errores de validación."
+                    : ex.Message,
                 KeyNotFoundException => "No se encontró el recurso solicitado.",
                 UnauthorizedAccessException => "No autorizado.",
                 ArgumentException => ex.Message,
@@ -110,6 +112,16 @@ namespace Clynic.Api.Middlewares
         {
             if (ex is not ValidationException validationException)
             {
+                return null;
+            }
+
+            if (validationException.Errors == null || !validationException.Errors.Any())
+            {
+                if (!string.IsNullOrWhiteSpace(validationException.Message))
+                {
+                    return new[] { validationException.Message };
+                }
+
                 return null;
             }
 

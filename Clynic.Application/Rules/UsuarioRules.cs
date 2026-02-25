@@ -6,13 +6,16 @@ namespace Clynic.Application.Rules
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly IClinicaRepository _clinicaRepository;
+        private readonly ISucursalRepository _sucursalRepository;
 
         public UsuarioRules(
             IUsuarioRepository usuarioRepository,
-            IClinicaRepository clinicaRepository)
+            IClinicaRepository clinicaRepository,
+            ISucursalRepository sucursalRepository)
         {
             _usuarioRepository = usuarioRepository ?? throw new ArgumentNullException(nameof(usuarioRepository));
             _clinicaRepository = clinicaRepository ?? throw new ArgumentNullException(nameof(clinicaRepository));
+            _sucursalRepository = sucursalRepository ?? throw new ArgumentNullException(nameof(sucursalRepository));
         }
 
         public async Task<bool> CorreoEsUnicoAsync(string correo, int? idExcluir = null)
@@ -32,6 +35,12 @@ namespace Clynic.Application.Rules
         public async Task<bool> UsuarioExisteAsync(int id)
         {
             return await _usuarioRepository.ExisteAsync(id);
+        }
+
+        public async Task<bool> SucursalPerteneceAClinicaAsync(int idSucursal, int idClinica)
+        {
+            var sucursal = await _sucursalRepository.ObtenerPorIdAsync(idSucursal);
+            return sucursal != null && sucursal.IdClinica == idClinica;
         }
 
         public bool ClaveEsValida(string clave)

@@ -4,6 +4,8 @@ using Clynic.Application.Interfaces.Repositories;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Application.Rules;
 using Clynic.Domain.Models;
+using Clynic.Domain.Models.Enums;
+using System.Security.Cryptography;
 
 namespace Clynic.Application.Services
 {
@@ -11,23 +13,29 @@ namespace Clynic.Application.Services
     {
         private readonly IUsuarioRepository _repository;
         private readonly IClinicaRepository _clinicaRepository;
+        private readonly IEmailService _emailService;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IValidator<RegisterDto> _createValidator;
+        private readonly IValidator<CreateUsuarioAdminDto> _createAdminValidator;
         private readonly IValidator<UpdateUsuarioDto> _updateValidator;
         private readonly UsuarioRules _rules;
 
         public UsuarioService(
             IUsuarioRepository repository,
             IClinicaRepository clinicaRepository,
+            IEmailService emailService,
             IPasswordHasher passwordHasher,
             IValidator<RegisterDto> createValidator,
+            IValidator<CreateUsuarioAdminDto> createAdminValidator,
             IValidator<UpdateUsuarioDto> updateValidator,
             UsuarioRules rules)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _clinicaRepository = clinicaRepository ?? throw new ArgumentNullException(nameof(clinicaRepository));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
             _createValidator = createValidator ?? throw new ArgumentNullException(nameof(createValidator));
+            _createAdminValidator = createAdminValidator ?? throw new ArgumentNullException(nameof(createAdminValidator));
             _updateValidator = updateValidator ?? throw new ArgumentNullException(nameof(updateValidator));
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
         }
@@ -41,6 +49,12 @@ namespace Clynic.Application.Services
         public async Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaAsync(int idClinica)
         {
             var usuarios = await _repository.ObtenerPorClinicaAsync(idClinica);
+            return usuarios.Select(MapToResponseDto);
+        }
+
+        public async Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal)
+        {
+            var usuarios = await _repository.ObtenerPorClinicaYSucursalAsync(idClinica, idSucursal);
             return usuarios.Select(MapToResponseDto);
         }
 
@@ -95,6 +109,12 @@ namespace Clynic.Application.Services
             if (!await _rules.ClinicaExisteAsync(createDto.IdClinica))
                 throw new InvalidOperationException("La clínica especificada no existe");
 
+            if (createDto.IdSucursal.HasValue &&
+                !await _rules.SucursalPerteneceAClinicaAsync(createDto.IdSucursal.Value, createDto.IdClinica))
+            {
+                throw new InvalidOperationException("La sucursal especificada no pertenece a la clínica");
+            }
+
             var usuario = new Usuario
             {
                 NombreCompleto = createDto.NombreCompleto.Trim(),
@@ -102,11 +122,65 @@ namespace Clynic.Application.Services
                 ClaveHash = _passwordHasher.Hash(createDto.Clave),
                 Rol = createDto.Rol,
                 IdClinica = createDto.IdClinica,
+                IdSucursal = createDto.IdSucursal,
                 Activo = true,
+                DebeCambiarClave = createDto.Rol != UsuarioRol.Admin,
                 FechaCreacion = DateTime.UtcNow
             };
 
             var usuarioCreado = await _repository.CrearAsync(usuario);
+
+            var clinica = await _clinicaRepository.ObtenerPorIdAsync(usuarioCreado.IdClinica);
+            var nombreClinica = clinica?.Nombre ?? "Clínica asignada";
+
+            await _emailService.EnviarBienvenidaUsuarioAsync(
+                usuarioCreado.Correo,
+                usuarioCreado.NombreCompleto,
+                nombreClinica,
+                usuarioCreado.Rol.ToString());
+
+            return MapToResponseDto(usuarioCreado);
+        }
+
+        public async Task<UsuarioResponseDto> CrearPorAdminAsync(CreateUsuarioAdminDto createDto)
+        {
+            if (createDto == null)
+                throw new ArgumentNullException(nameof(createDto));
+
+            var validationResult = await _createAdminValidator.ValidateAsync(createDto);
+            if (!validationResult.IsValid)
+            {
+                var errores = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
+                throw new ValidationException($"Errores de validación: {errores}");
+            }
+
+            var claveTemporal = GenerarClaveTemporal(12);
+
+            var usuario = new Usuario
+            {
+                NombreCompleto = createDto.NombreCompleto.Trim(),
+                Correo = createDto.Correo.Trim().ToLower(),
+                ClaveHash = _passwordHasher.Hash(claveTemporal),
+                Rol = createDto.Rol,
+                IdClinica = createDto.IdClinica,
+                IdSucursal = createDto.IdSucursal,
+                Activo = true,
+                DebeCambiarClave = true,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+            var usuarioCreado = await _repository.CrearAsync(usuario);
+
+            var clinica = await _clinicaRepository.ObtenerPorIdAsync(usuarioCreado.IdClinica);
+            var nombreClinica = clinica?.Nombre ?? "Clínica asignada";
+
+            await _emailService.EnviarCredencialesTemporalesAsync(
+                usuarioCreado.Correo,
+                usuarioCreado.NombreCompleto,
+                nombreClinica,
+                usuarioCreado.Rol.ToString(),
+                claveTemporal);
+
             return MapToResponseDto(usuarioCreado);
         }
 
@@ -143,6 +217,14 @@ namespace Clynic.Application.Services
             if (updateDto.Rol.HasValue)
                 usuario.Rol = updateDto.Rol.Value;
 
+            if (updateDto.IdSucursal.HasValue)
+            {
+                if (!await _rules.SucursalPerteneceAClinicaAsync(updateDto.IdSucursal.Value, usuario.IdClinica))
+                    throw new InvalidOperationException("La sucursal especificada no pertenece a la clínica");
+
+                usuario.IdSucursal = updateDto.IdSucursal.Value;
+            }
+
             if (updateDto.Activo.HasValue)
                 usuario.Activo = updateDto.Activo.Value;
 
@@ -174,6 +256,7 @@ namespace Clynic.Application.Services
                 throw new UnauthorizedAccessException("La clave actual es incorrecta");
 
             usuario.ClaveHash = _passwordHasher.Hash(changePasswordDto.NuevaClave);
+            usuario.DebeCambiarClave = false;
             await _repository.ActualizarAsync(usuario);
 
             return true;
@@ -192,6 +275,7 @@ namespace Clynic.Application.Services
                 return false;
 
             usuario.ClaveHash = nuevaClaveHash;
+            usuario.DebeCambiarClave = false;
             await _repository.ActualizarAsync(usuario);
 
             return true;
@@ -206,10 +290,43 @@ namespace Clynic.Application.Services
                 Correo = usuario.Correo,
                 Rol = usuario.Rol,
                 Activo = usuario.Activo,
+                DebeCambiarClave = usuario.DebeCambiarClave,
                 IdClinica = usuario.IdClinica,
                 NombreClinica = usuario.Clinica?.Nombre,
+                IdSucursal = usuario.IdSucursal,
+                NombreSucursal = usuario.Sucursal?.Nombre,
                 FechaCreacion = usuario.FechaCreacion
             };
+        }
+
+        private static string GenerarClaveTemporal(int longitud)
+        {
+            const string mayusculas = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+            const string minusculas = "abcdefghijkmnopqrstuvwxyz";
+            const string numeros = "23456789";
+            const string simbolos = "!@#$%*?";
+
+            var todos = mayusculas + minusculas + numeros + simbolos;
+            var clave = new List<char>(longitud)
+            {
+                mayusculas[RandomNumberGenerator.GetInt32(mayusculas.Length)],
+                minusculas[RandomNumberGenerator.GetInt32(minusculas.Length)],
+                numeros[RandomNumberGenerator.GetInt32(numeros.Length)],
+                simbolos[RandomNumberGenerator.GetInt32(simbolos.Length)]
+            };
+
+            for (var i = clave.Count; i < longitud; i++)
+            {
+                clave.Add(todos[RandomNumberGenerator.GetInt32(todos.Length)]);
+            }
+
+            for (var i = clave.Count - 1; i > 0; i--)
+            {
+                var j = RandomNumberGenerator.GetInt32(i + 1);
+                (clave[i], clave[j]) = (clave[j], clave[i]);
+            }
+
+            return new string(clave.ToArray());
         }
     }
 }

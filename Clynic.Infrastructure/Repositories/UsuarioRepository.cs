@@ -18,6 +18,7 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .OrderBy(u => u.NombreCompleto)
                 .ToListAsync();
         }
@@ -26,7 +27,18 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .Where(u => u.IdClinica == idClinica)
+                .OrderBy(u => u.NombreCompleto)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Usuario>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal)
+        {
+            return await _context.Usuarios
+                .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
+                .Where(u => u.IdClinica == idClinica && u.IdSucursal == idSucursal)
                 .OrderBy(u => u.NombreCompleto)
                 .ToListAsync();
         }
@@ -35,6 +47,7 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
 
@@ -45,6 +58,7 @@ namespace Clynic.Infrastructure.Repositories
 
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .FirstOrDefaultAsync(u => u.Correo.ToLower() == correo.ToLower());
         }
 

@@ -1,6 +1,7 @@
 using Clynic.Application.DTOs.HorariosSucursal;
 using Clynic.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Clynic.Api.Controllers
 {
@@ -10,6 +11,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("/[controller]")]
     [Produces("application/json")]
+    [Authorize]
     public class HorariosSucursalController : ControllerBase
     {
         private readonly IHorarioSucursalService _horarioSucursalService;
@@ -23,6 +25,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene todos los horarios
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<HorarioSucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<HorarioSucursalResponseDto>>> ObtenerTodos()
@@ -35,6 +38,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene un horario por su ID
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(HorarioSucursalResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -60,6 +64,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene los horarios de una sucursal
         /// </summary>
         [HttpGet("sucursal/{idSucursal}")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<HorarioSucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -78,6 +83,7 @@ namespace Clynic.Api.Controllers
         /// Crea una nueva configuracion de horario para sucursal
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(HorarioSucursalResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
