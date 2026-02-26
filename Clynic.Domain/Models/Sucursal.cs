@@ -21,5 +21,7 @@ namespace Clynic.Domain.Models
             = new List<AsuetoSucursal>();
         public ICollection<Cita> Citas { get; set; }
             = new List<Cita>();
+        public ICollection<ConsultaMedica> ConsultasMedicas { get; set; }
+            = new List<ConsultaMedica>();
     }
 }

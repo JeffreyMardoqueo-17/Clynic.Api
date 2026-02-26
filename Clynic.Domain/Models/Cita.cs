@@ -26,6 +26,7 @@ namespace Clynic.Domain.Models
         public decimal SubTotal { get; set; }
         public decimal TotalFinal { get; set; }
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+        public ConsultaMedica? ConsultaMedica { get; set; }
         public ICollection<CitaServicio> CitaServicios { get; set; }
             = new List<CitaServicio>();
     }

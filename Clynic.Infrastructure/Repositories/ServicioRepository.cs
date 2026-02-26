@@ -100,5 +100,19 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Servicios.AnyAsync(s => s.Id == id && s.Activo);
         }
+
+        public async Task<IReadOnlyCollection<Servicio>> ObtenerPorIdsClinicaAsync(int idClinica, IEnumerable<int> idsServicios)
+        {
+            var ids = idsServicios?.Distinct().ToList() ?? new List<int>();
+            if (ids.Count == 0)
+            {
+                return Array.Empty<Servicio>();
+            }
+
+            return await _context.Servicios
+                .Where(s => s.IdClinica == idClinica && s.Activo && ids.Contains(s.Id))
+                .OrderBy(s => s.NombreServicio)
+                .ToListAsync();
+        }
     }
 }

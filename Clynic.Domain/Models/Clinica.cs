@@ -19,7 +19,11 @@ namespace Clynic.Domain.Models
             = new List<Usuario>();
         public ICollection<Servicio> Servicios { get; set; }
             = new List<Servicio>();
+        public ICollection<Paciente> Pacientes { get; set; }
+            = new List<Paciente>();
         public ICollection<Cita> Citas { get; set; }
             = new List<Cita>();
+        public ICollection<ConsultaMedica> ConsultasMedicas { get; set; }
+            = new List<ConsultaMedica>();
     }
 }

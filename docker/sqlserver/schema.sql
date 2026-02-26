@@ -62,9 +62,17 @@ GO
 ========================================= */
 CREATE TABLE Paciente (
     Id INT IDENTITY(1,1) PRIMARY KEY,
-    NombreCompleto NVARCHAR(150),
+    IdClinica INT NOT NULL,
+    Nombres NVARCHAR(150) NOT NULL,
+    Apellidos NVARCHAR(150) NOT NULL,
     Telefono NVARCHAR(50),
-    FechaRegistro DATETIME DEFAULT GETDATE()
+    Correo NVARCHAR(150),
+    FechaNacimiento DATE NULL,
+    FechaRegistro DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_Paciente_Clinica
+        FOREIGN KEY (IdClinica)
+        REFERENCES Clinica(Id)
 );
 GO
 
@@ -160,7 +168,69 @@ CREATE TABLE CitaServicio (
 GO
 
 /* =========================================
-   9. CODIGO VERIFICACION
+   9. HISTORIAL CLINICO
+========================================= */
+CREATE TABLE HistorialClinico (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    IdPaciente INT NOT NULL UNIQUE,
+    EnfermedadesPrevias NVARCHAR(MAX) NULL,
+    MedicamentosActuales NVARCHAR(MAX) NULL,
+    Alergias NVARCHAR(MAX) NULL,
+    AntecedentesFamiliares NVARCHAR(MAX) NULL,
+    Observaciones NVARCHAR(MAX) NULL,
+    FechaCreacion DATETIME DEFAULT GETDATE(),
+    FechaActualizacion DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_HistorialClinico_Paciente
+        FOREIGN KEY (IdPaciente)
+        REFERENCES Paciente(Id)
+        ON DELETE CASCADE
+);
+GO
+
+/* =========================================
+   10. CONSULTA MEDICA
+========================================= */
+CREATE TABLE ConsultaMedica (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    IdCita INT NOT NULL UNIQUE,
+    IdClinica INT NOT NULL,
+    IdSucursal INT NOT NULL,
+    IdPaciente INT NOT NULL,
+    IdDoctor INT NULL,
+    Diagnostico NVARCHAR(MAX) NULL,
+    Tratamiento NVARCHAR(MAX) NULL,
+    Receta NVARCHAR(MAX) NULL,
+    ExamenesSolicitados NVARCHAR(MAX) NULL,
+    NotasMedicas NVARCHAR(MAX) NULL,
+    FechaConsulta DATETIME DEFAULT GETDATE(),
+    FechaCreacion DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_ConsultaMedica_Cita
+        FOREIGN KEY (IdCita)
+        REFERENCES Cita(Id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT FK_ConsultaMedica_Clinica
+        FOREIGN KEY (IdClinica)
+        REFERENCES Clinica(Id),
+
+    CONSTRAINT FK_ConsultaMedica_Sucursal
+        FOREIGN KEY (IdSucursal)
+        REFERENCES Sucursal(Id),
+
+    CONSTRAINT FK_ConsultaMedica_Paciente
+        FOREIGN KEY (IdPaciente)
+        REFERENCES Paciente(Id),
+
+    CONSTRAINT FK_ConsultaMedica_Doctor
+        FOREIGN KEY (IdDoctor)
+        REFERENCES Usuario(Id)
+);
+GO
+
+/* =========================================
+   11. CODIGO VERIFICACION
 ========================================= */
 CREATE TABLE CodigoVerificacion (
     Id INT IDENTITY(1,1) PRIMARY KEY,
@@ -183,15 +253,21 @@ CREATE TABLE CodigoVerificacion (
 GO
 
 /* =========================================
-   10. INDICES PARA CODIGO VERIFICACION
+    12. INDICES BASE
 ========================================= */
+CREATE INDEX IX_Paciente_IdClinica ON Paciente(IdClinica);
+CREATE INDEX IX_Paciente_IdClinica_Correo ON Paciente(IdClinica, Correo);
+CREATE INDEX IX_Cita_IdClinica_FechaHoraInicioPlan ON Cita(IdClinica, FechaHoraInicioPlan);
+CREATE INDEX IX_Cita_IdSucursal_FechaHoraInicioPlan ON Cita(IdSucursal, FechaHoraInicioPlan);
+CREATE INDEX IX_ConsultaMedica_Clinica_Paciente_Fecha ON ConsultaMedica(IdClinica, IdPaciente, FechaConsulta);
+
 CREATE INDEX IX_CodigoVerificacion_IdUsuario ON CodigoVerificacion(IdUsuario);
 CREATE INDEX IX_CodigoVerificacion_Codigo ON CodigoVerificacion(Codigo);
 CREATE INDEX IX_Usuario_IdSucursal ON Usuario(IdSucursal);
 GO
 
 /* =========================================
-   11. ASUETO SUCURSAL
+    13. ASUETO SUCURSAL
 ========================================= */
 CREATE TABLE AsuetoSucursal (
     Id INT IDENTITY(1,1) PRIMARY KEY,
