@@ -46,15 +46,21 @@ namespace Clynic.Application.Services
             return usuarios.Select(MapToResponseDto);
         }
 
-        public async Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaAsync(int idClinica)
+        public async Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaAsync(int idClinica, string? busquedaNombre = null)
         {
-            var usuarios = await _repository.ObtenerPorClinicaAsync(idClinica);
+            var usuarios = await _repository.ObtenerPorClinicaAsync(idClinica, busquedaNombre);
             return usuarios.Select(MapToResponseDto);
         }
 
-        public async Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal)
+        public async Task<IEnumerable<UsuarioResponseDto>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal, string? busquedaNombre = null)
         {
-            var usuarios = await _repository.ObtenerPorClinicaYSucursalAsync(idClinica, idSucursal);
+            var usuarios = await _repository.ObtenerPorClinicaYSucursalAsync(idClinica, idSucursal, busquedaNombre);
+            return usuarios.Select(MapToResponseDto);
+        }
+
+        public async Task<IEnumerable<UsuarioResponseDto>> ObtenerInactivosPorClinicaAsync(int idClinica, int? idSucursal = null, string? busquedaNombre = null)
+        {
+            var usuarios = await _repository.ObtenerInactivosPorClinicaAsync(idClinica, idSucursal, busquedaNombre);
             return usuarios.Select(MapToResponseDto);
         }
 

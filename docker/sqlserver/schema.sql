@@ -189,3 +189,24 @@ CREATE INDEX IX_CodigoVerificacion_IdUsuario ON CodigoVerificacion(IdUsuario);
 CREATE INDEX IX_CodigoVerificacion_Codigo ON CodigoVerificacion(Codigo);
 CREATE INDEX IX_Usuario_IdSucursal ON Usuario(IdSucursal);
 GO
+
+/* =========================================
+   11. ASUETO SUCURSAL
+========================================= */
+CREATE TABLE AsuetoSucursal (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    IdSucursal INT NOT NULL,
+    Fecha DATE NOT NULL,
+    Motivo NVARCHAR(200) NULL,
+    FechaCreacion DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_AsuetoSucursal_Sucursal
+        FOREIGN KEY (IdSucursal)
+        REFERENCES Sucursal(Id)
+        ON DELETE CASCADE
+);
+GO
+
+CREATE UNIQUE INDEX UX_AsuetoSucursal_Sucursal_Fecha
+    ON AsuetoSucursal(IdSucursal, Fecha);
+GO

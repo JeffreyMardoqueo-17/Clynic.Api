@@ -3,6 +3,7 @@
 set -euo pipefail
 
 DB_PASSWORD="${MSSQL_SA_PASSWORD:-${SA_PASSWORD:-}}"
+DB_NAME="${SQL_DATABASE:-ClynicDB}"
 
 if [ -z "${DB_PASSWORD}" ]; then
     echo "❌ No se encontró contraseña de SA. Define MSSQL_SA_PASSWORD (o SA_PASSWORD)."
@@ -21,7 +22,7 @@ SERVER_PID=$!
 # Esperar a que SQL Server esté listo
 echo "⏳ Esperando a que SQL Server esté disponible..."
 for i in {1..60}; do
-    if sqlcmd -S localhost -U sa -P "${DB_PASSWORD}" -Q "SELECT 1" > /dev/null 2>&1; then
+    if sqlcmd -S localhost -U sa -P "${DB_PASSWORD}" -d master -Q "SELECT 1" > /dev/null 2>&1; then
         echo "✅ SQL Server disponible"
         break
     fi
@@ -34,37 +35,32 @@ for i in {1..60}; do
     sleep 2
 done
 
-# Ejecutar scripts SQL en orden específico
-echo "📄 Ejecutando scripts SQL..."
+# Verificar si la base de datos ya existe para evitar reinicialización
+DB_EXISTS=$(sqlcmd -h -1 -W -S localhost -U sa -P "${DB_PASSWORD}" -d master -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'${DB_NAME}') IS NULL THEN 0 ELSE 1 END" | tr -d '\r')
 
-# 1. Crear base de datos
-echo "  [1/3] Ejecutando: init.sql"
-sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/init.sql"
-if [ $? -eq 0 ]; then
+if [ "${DB_EXISTS}" = "1" ]; then
+    echo "ℹ️ La base de datos ${DB_NAME} ya existe. Se omite inicialización de scripts."
+else
+    # Ejecutar scripts SQL en orden específico
+    echo "📄 Ejecutando scripts SQL..."
+
+    # 1. Crear base de datos
+    echo "  [1/3] Ejecutando: init.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -d master -i "/usr/scripts/init.sql"
     echo "    ✅ Base de datos creada"
-else
-    echo "    ⚠️ Error al crear base de datos"
-fi
 
-# 2. Crear schema y tablas
-echo "  [2/3] Ejecutando: schema.sql"
-sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/schema.sql"
-if [ $? -eq 0 ]; then
+    # 2. Crear schema y tablas
+    echo "  [2/3] Ejecutando: schema.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/schema.sql"
     echo "    ✅ Schema creado"
-else
-    echo "    ⚠️ Error al crear schema"
-fi
 
-# 3. Insertar datos
-echo "  [3/3] Ejecutando: seed-data.sql"
-sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/seed-data.sql"
-if [ $? -eq 0 ]; then
+    # 3. Insertar datos
+    echo "  [3/3] Ejecutando: seed-data.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/seed-data.sql"
     echo "    ✅ Datos insertados"
-else
-    echo "    ⚠️ Error al insertar datos"
-fi
 
-echo "✅ Inicialización completada"
+    echo "✅ Inicialización completada"
+fi
 
 # Mantener SQL Server en foreground
 wait $SERVER_PID

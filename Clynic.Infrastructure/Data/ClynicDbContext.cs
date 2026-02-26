@@ -21,6 +21,7 @@ namespace Clynic.Infrastructure.Data
         public DbSet<Paciente> Pacientes { get; set; } = null!;
         public DbSet<Servicio> Servicios { get; set; } = null!;
         public DbSet<HorarioSucursal> HorariosSucursal { get; set; } = null!;
+        public DbSet<AsuetoSucursal> AsuetosSucursal { get; set; } = null!;
         public DbSet<Cita> Citas { get; set; } = null!;
         public DbSet<CitaServicio> CitasServicio { get; set; } = null!;
         public DbSet<CodigoVerificacion> CodigosVerificacion { get; set; } = null!;
@@ -36,6 +37,7 @@ namespace Clynic.Infrastructure.Data
             ConfigurePacientes(modelBuilder);
             ConfigureServicios(modelBuilder);
             ConfigureHorariosSucursal(modelBuilder);
+            ConfigureAsuetosSucursal(modelBuilder);
             ConfigureCitas(modelBuilder);
             ConfigureCitasServicio(modelBuilder);
             ConfigureCodigosVerificacion(modelBuilder);
@@ -120,6 +122,10 @@ namespace Clynic.Infrastructure.Data
                     .WithOne(e => e.Sucursal)
                     .HasForeignKey(e => e.IdSucursal);
 
+                entity.HasMany(e => e.Asuetos)
+                    .WithOne(e => e.Sucursal)
+                    .HasForeignKey(e => e.IdSucursal);
+
                 entity.HasMany(e => e.Citas)
                     .WithOne(e => e.Sucursal)
                     .HasForeignKey(e => e.IdSucursal);
@@ -128,6 +134,34 @@ namespace Clynic.Infrastructure.Data
                     .WithOne(e => e.Sucursal)
                     .HasForeignKey(e => e.IdSucursal)
                     .OnDelete(DeleteBehavior.NoAction);
+            });
+        }
+
+        private void ConfigureAsuetosSucursal(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<AsuetoSucursal>(entity =>
+            {
+                entity.ToTable("AsuetoSucursal");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdSucursal)
+                    .IsRequired();
+
+                entity.Property(e => e.Fecha)
+                    .IsRequired();
+
+                entity.Property(e => e.Motivo)
+                    .HasMaxLength(200)
+                    .IsRequired(false);
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasIndex(e => new { e.IdSucursal, e.Fecha })
+                    .IsUnique();
             });
         }
 

@@ -52,12 +52,37 @@ namespace Clynic.Infrastructure.Repositories
             return horario;
         }
 
-        public async Task<bool> ExisteCruceHorarioAsync(int idSucursal, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin)
+        public async Task<HorarioSucursal> ActualizarAsync(HorarioSucursal horario)
+        {
+            if (horario == null)
+                throw new ArgumentNullException(nameof(horario));
+
+            _context.HorariosSucursal.Update(horario);
+            await _context.SaveChangesAsync();
+
+            return horario;
+        }
+
+        public async Task<bool> EliminarAsync(int id)
+        {
+            var horario = await _context.HorariosSucursal.FirstOrDefaultAsync(h => h.Id == id);
+            if (horario == null)
+            {
+                return false;
+            }
+
+            _context.HorariosSucursal.Remove(horario);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ExisteCruceHorarioAsync(int idSucursal, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin, int? idExcluir = null)
         {
             return await _context.HorariosSucursal
                 .AnyAsync(h =>
                     h.IdSucursal == idSucursal &&
                     h.DiaSemana == diaSemana &&
+                    (!idExcluir.HasValue || h.Id != idExcluir.Value) &&
                     h.HoraInicio.HasValue &&
                     h.HoraFin.HasValue &&
                     h.HoraInicio.Value < horaFin &&

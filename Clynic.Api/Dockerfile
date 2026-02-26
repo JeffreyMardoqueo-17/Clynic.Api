@@ -34,8 +34,8 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Health check simple
+# Health check del puerto HTTP de la API
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-  CMD dotnet /app/Clynic.Api.dll --version > /dev/null 2>&1 || exit 1
+  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1
 
 ENTRYPOINT ["dotnet", "Clynic.Api.dll"]

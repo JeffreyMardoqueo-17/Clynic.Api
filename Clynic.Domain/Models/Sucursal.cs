@@ -17,6 +17,8 @@ namespace Clynic.Domain.Models
             = new List<Usuario>();
         public ICollection<HorarioSucursal> Horarios { get; set; }
             = new List<HorarioSucursal>();
+        public ICollection<AsuetoSucursal> Asuetos { get; set; }
+            = new List<AsuetoSucursal>();
         public ICollection<Cita> Citas { get; set; }
             = new List<Cita>();
     }

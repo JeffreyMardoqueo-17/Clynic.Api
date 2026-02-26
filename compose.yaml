@@ -9,6 +9,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
       MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}"
+      SQL_DATABASE: "${SQL_DATABASE}"
 
     ports:
       - "${DB_PORT:-1433}:1433"
@@ -20,7 +21,7 @@ services:
       - clynic-network
 
     healthcheck:
-      test: ["CMD-SHELL", "/usr/local/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" || exit 1"]
+      test: ["CMD-SHELL", "/usr/local/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -d master -Q \"SELECT 1\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
