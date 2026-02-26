@@ -20,5 +20,7 @@ namespace Clynic.Domain.Models
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
         public ICollection<Cita> CitasComoDoctor { get; set; }
             = new List<Cita>();
+        public ICollection<ConsultaMedica> ConsultasMedicasRealizadas { get; set; }
+            = new List<ConsultaMedica>();
     }
 }

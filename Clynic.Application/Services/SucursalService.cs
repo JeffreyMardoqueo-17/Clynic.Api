@@ -28,6 +28,15 @@ namespace Clynic.Application.Services
             return sucursales.Select(MapToResponseDto);
         }
 
+        public async Task<IEnumerable<SucursalResponseDto>> ObtenerPorClinicaAsync(int idClinica)
+        {
+            if (idClinica <= 0)
+                throw new ArgumentException("El ID de clínica debe ser mayor a cero.", nameof(idClinica));
+
+            var sucursales = await _repository.ObtenerPorClinicaAsync(idClinica);
+            return sucursales.Select(MapToResponseDto);
+        }
+
         public async Task<SucursalResponseDto?> ObtenerPorIdAsync(int id)
         {
             if (id <= 0)

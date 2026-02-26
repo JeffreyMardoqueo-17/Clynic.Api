@@ -38,6 +38,36 @@ namespace Clynic.Api.Controllers
             return Ok(sucursales);
         }
 
+        [HttpGet("clinica/{idClinica}")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [ProducesResponseType(typeof(IEnumerable<SucursalResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<SucursalResponseDto>>> ObtenerPorClinica(int idClinica)
+        {
+            var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
+            if (!int.TryParse(idClinicaClaim, out var idClinicaToken) || idClinicaToken != idClinica)
+            {
+                return Forbid();
+            }
+
+            var sucursales = await _sucursalService.ObtenerPorClinicaAsync(idClinica);
+
+            if (!User.IsInRole("Admin"))
+            {
+                var idSucursalClaim = User.FindFirst("IdSucursal")?.Value;
+                if (!int.TryParse(idSucursalClaim, out var idSucursalToken) || idSucursalToken <= 0)
+                {
+                    return Forbid();
+                }
+
+                sucursales = sucursales.Where(s => s.Id == idSucursalToken);
+            }
+
+            return Ok(sucursales);
+        }
+
         /// <summary>
         /// Obtiene una sucursal por su ID
         /// </summary>

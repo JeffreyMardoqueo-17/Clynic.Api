@@ -14,6 +14,8 @@ using Clynic.Application.DTOs.HorariosSucursal;
 using Clynic.Application.DTOs.Servicios;
 using Clynic.Application.DTOs.Sucursales;
 using Clynic.Application.DTOs.Usuarios;
+using Clynic.Application.DTOs.Citas;
+using Clynic.Application.DTOs.Pacientes;
 using Clynic.Application.Validators;
 using Clynic.Api.Middlewares;
 
@@ -54,6 +56,8 @@ builder.Services.AddScoped<IAsuetoSucursalRepository, AsuetoSucursalRepository>(
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<ICodigoVerificacionRepository, CodigoVerificacionRepository>();
+builder.Services.AddScoped<IPacienteRepository, PacienteRepository>();
+builder.Services.AddScoped<ICitaRepository, CitaRepository>();
 
 // DI - Services
 builder.Services.AddScoped<IClinicaService, ClinicaService>();
@@ -66,6 +70,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddScoped<IPacienteService, PacienteService>();
+builder.Services.AddScoped<ICitaService, CitaService>();
 
 // DI - Business Rules
 builder.Services.AddScoped<ClinicaRules>();
@@ -73,6 +79,8 @@ builder.Services.AddScoped<SucursalRules>();
 builder.Services.AddScoped<HorarioSucursalRules>();
 builder.Services.AddScoped<ServicioRules>();
 builder.Services.AddScoped<UsuarioRules>();
+builder.Services.AddScoped<PacienteRules>();
+builder.Services.AddScoped<CitaRules>();
 
 // DI - Validators
 builder.Services.AddScoped<IValidator<CreateClinicaDto>, CreateClinicaDtoValidator>();
@@ -89,6 +97,11 @@ builder.Services.AddScoped<IValidator<UpdateUsuarioDto>, UpdateUsuarioDtoValidat
 builder.Services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordDtoValidator>();
 builder.Services.AddScoped<IValidator<ForgotPasswordDto>, ForgotPasswordDtoValidator>();
 builder.Services.AddScoped<IValidator<ResetPasswordDto>, ResetPasswordDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateCitaPublicaDto>, CreateCitaPublicaDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateCitaInternaDto>, CreateCitaInternaDtoValidator>();
+builder.Services.AddScoped<IValidator<RegistrarConsultaMedicaDto>, RegistrarConsultaMedicaDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdatePacienteDto>, UpdatePacienteDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateHistorialClinicoDto>, UpdateHistorialClinicoDtoValidator>();
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 

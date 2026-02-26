@@ -194,6 +194,85 @@ namespace Clynic.Application.Services
             await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);
         }
 
+        public async Task EnviarConfirmacionCitaAgendadaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            IEnumerable<string> servicios,
+            string notas)
+        {
+            var asunto = "Clynic - Tu cita fue agendada";
+            var serviciosHtml = string.Join(string.Empty,
+                (servicios ?? Array.Empty<string>())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => $"<li style='margin: 6px 0;'>{WebUtility.HtmlEncode(s)}</li>"));
+
+            if (string.IsNullOrWhiteSpace(serviciosHtml))
+            {
+                serviciosHtml = "<li style='margin: 6px 0;'>Consulta general</li>";
+            }
+
+            var notasTexto = string.IsNullOrWhiteSpace(notas)
+                ? "Sin notas adicionales."
+                : WebUtility.HtmlEncode(notas.Trim());
+
+            var cuerpoHtml = $@"
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+</head>
+<body style='font-family: Arial, sans-serif; color: #333; background-color: #f4f4f4; padding: 20px; margin: 0;'>
+    <div style='max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+        <div style='background: linear-gradient(135deg, #007acc, #00a8e8); padding: 30px; text-align: center;'>
+            <h1 style='color: #ffffff; margin: 0; font-size: 28px;'>Clynic</h1>
+            <p style='color: #e0f7ff; margin: 10px 0 0 0; font-size: 14px;'>Confirmación de cita</p>
+        </div>
+
+        <div style='padding: 34px 30px;'>
+            <h2 style='color: #007acc; margin-top: 0;'>Hola {WebUtility.HtmlEncode(nombrePaciente)},</h2>
+
+            <p style='font-size: 16px; line-height: 1.6; color: #555;'>
+                Tu cita fue agendada correctamente. Aquí tienes los detalles:
+            </p>
+
+            <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 18px; margin: 24px 0;'>
+                <p style='margin: 0 0 8px 0; color: #495057; font-size: 14px;'><strong>Clínica:</strong> {WebUtility.HtmlEncode(nombreClinica)}</p>
+                <p style='margin: 0 0 8px 0; color: #495057; font-size: 14px;'><strong>Sucursal:</strong> {WebUtility.HtmlEncode(nombreSucursal)}</p>
+                <p style='margin: 0 0 8px 0; color: #495057; font-size: 14px;'><strong>Fecha:</strong> {fechaHoraInicio:dd/MM/yyyy}</p>
+                <p style='margin: 0; color: #495057; font-size: 14px;'><strong>Horario:</strong> {fechaHoraInicio:HH:mm} - {fechaHoraFin:HH:mm}</p>
+            </div>
+
+            <h3 style='color: #007acc; margin-bottom: 10px;'>Servicios</h3>
+            <ul style='padding-left: 20px; margin-top: 0; color: #555; font-size: 14px;'>
+                {serviciosHtml}
+            </ul>
+
+            <h3 style='color: #007acc; margin-bottom: 10px;'>Notas</h3>
+            <p style='font-size: 14px; color: #555; line-height: 1.6; margin-top: 0;'>
+                {notasTexto}
+            </p>
+        </div>
+
+        <div style='background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;'>
+            <p style='margin: 0; color: #6c757d; font-size: 12px;'>
+                Este es un correo automático, por favor no responda a este mensaje.
+            </p>
+            <p style='margin: 10px 0 0 0; color: #6c757d; font-size: 12px;'>
+                © {DateTime.UtcNow.Year} Clynic - Sistema de Gestión de Citas
+            </p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);
+        }
+
         public async Task EnviarEmailAsync(string emailDestino, string asunto, string cuerpoHtml)
         {
             await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);
