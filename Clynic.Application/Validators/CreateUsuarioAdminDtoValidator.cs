@@ -4,11 +4,11 @@ using Clynic.Application.Rules;
 
 namespace Clynic.Application.Validators
 {
-    public class RegisterDtoValidator : AbstractValidator<RegisterDto>
+    public class CreateUsuarioAdminDtoValidator : AbstractValidator<CreateUsuarioAdminDto>
     {
         private readonly UsuarioRules _rules;
 
-        public RegisterDtoValidator(UsuarioRules rules)
+        public CreateUsuarioAdminDtoValidator(UsuarioRules rules)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
 
@@ -29,16 +29,6 @@ namespace Clynic.Application.Validators
                 .WithMessage("El correo no puede exceder 150 caracteres")
                 .MustAsync(async (correo, cancellation) => await _rules.CorreoEsUnicoAsync(correo))
                 .WithMessage("Ya existe un usuario con este correo electrónico");
-
-            RuleFor(x => x.Clave)
-                .NotEmpty()
-                .WithMessage("La clave es obligatoria")
-                .MinimumLength(6)
-                .WithMessage("La clave debe tener al menos 6 caracteres")
-                .MaximumLength(100)
-                .WithMessage("La clave no puede exceder 100 caracteres")
-                .Must(clave => _rules.ClaveEsValida(clave))
-                .WithMessage("La clave debe tener al menos 6 caracteres válidos");
 
             RuleFor(x => x.IdClinica)
                 .NotEmpty()

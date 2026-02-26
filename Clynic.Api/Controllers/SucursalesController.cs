@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Clynic.Application.DTOs.Sucursales;
 using Clynic.Application.Interfaces.Services;
 
@@ -10,6 +11,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("/[controller]")]
     [Produces("application/json")]
+    [Authorize]
     public class SucursalesController : ControllerBase
     {
         private readonly ISucursalService _sucursalService;
@@ -27,6 +29,7 @@ namespace Clynic.Api.Controllers
         /// <response code="200">Retorna la lista de sucursales</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<SucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<SucursalResponseDto>>> ObtenerTodas()
@@ -45,6 +48,7 @@ namespace Clynic.Api.Controllers
         /// <response code="400">ID invalido</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(SucursalResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -75,6 +79,7 @@ namespace Clynic.Api.Controllers
         /// <response code="400">Datos de entrada invalidos</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(SucursalResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

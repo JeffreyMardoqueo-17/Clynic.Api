@@ -11,6 +11,7 @@ using Clynic.Application.Services;
 using Clynic.Application.Rules;
 using Clynic.Application.DTOs.Clinicas;
 using Clynic.Application.DTOs.HorariosSucursal;
+using Clynic.Application.DTOs.Servicios;
 using Clynic.Application.DTOs.Sucursales;
 using Clynic.Application.DTOs.Usuarios;
 using Clynic.Application.Validators;
@@ -49,6 +50,8 @@ builder.Services.AddDbContext<ClynicDbContext>(options =>
 builder.Services.AddScoped<IClinicaRepository, ClinicaRepository>();
 builder.Services.AddScoped<ISucursalRepository, SucursalRepository>();
 builder.Services.AddScoped<IHorarioSucursalRepository, HorarioSucursalRepository>();
+builder.Services.AddScoped<IAsuetoSucursalRepository, AsuetoSucursalRepository>();
+builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<ICodigoVerificacionRepository, CodigoVerificacionRepository>();
 
@@ -56,6 +59,7 @@ builder.Services.AddScoped<ICodigoVerificacionRepository, CodigoVerificacionRepo
 builder.Services.AddScoped<IClinicaService, ClinicaService>();
 builder.Services.AddScoped<ISucursalService, SucursalService>();
 builder.Services.AddScoped<IHorarioSucursalService, HorarioSucursalService>();
+builder.Services.AddScoped<IServicioService, ServicioService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -67,13 +71,19 @@ builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
 builder.Services.AddScoped<ClinicaRules>();
 builder.Services.AddScoped<SucursalRules>();
 builder.Services.AddScoped<HorarioSucursalRules>();
+builder.Services.AddScoped<ServicioRules>();
 builder.Services.AddScoped<UsuarioRules>();
 
 // DI - Validators
 builder.Services.AddScoped<IValidator<CreateClinicaDto>, CreateClinicaDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateSucursalDto>, CreateSucursalDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateHorarioSucursalDto>, CreateHorarioSucursalDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateHorarioSucursalDto>, UpdateHorarioSucursalDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateAsuetoSucursalDto>, CreateAsuetoSucursalDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateServicioDto>, CreateServicioDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateServicioDto>, UpdateServicioDtoValidator>();
 builder.Services.AddScoped<IValidator<RegisterDto>, RegisterDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateUsuarioAdminDto>, CreateUsuarioAdminDtoValidator>();
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateUsuarioDto>, UpdateUsuarioDtoValidator>();
 builder.Services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordDtoValidator>();
@@ -182,6 +192,21 @@ if (app.Environment.IsDevelopment())
     try
     {
         dbContext.Database.EnsureCreated();
+        dbContext.Database.ExecuteSqlRaw(@"
+IF OBJECT_ID(N'AsuetoSucursal', N'U') IS NULL
+BEGIN
+    CREATE TABLE AsuetoSucursal (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdSucursal INT NOT NULL,
+        Fecha DATE NOT NULL,
+        Motivo NVARCHAR(200) NULL,
+        FechaCreacion DATETIME NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT FK_AsuetoSucursal_Sucursal FOREIGN KEY (IdSucursal) REFERENCES Sucursal(Id)
+    );
+
+    CREATE UNIQUE INDEX UX_AsuetoSucursal_Sucursal_Fecha ON AsuetoSucursal(IdSucursal, Fecha);
+END
+");
         app.Logger.LogInformation("✅ Base de datos lista");
     }
     catch (Exception ex)

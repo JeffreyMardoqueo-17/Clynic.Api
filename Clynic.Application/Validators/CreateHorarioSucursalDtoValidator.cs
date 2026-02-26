@@ -24,7 +24,7 @@ namespace Clynic.Application.Validators
 
             RuleFor(x => x.DiaSemana)
                 .Must(diaSemana => _rules.DiaSemanaEsValido(diaSemana))
-                .WithMessage("El dia de la semana debe estar entre 0 (Domingo) y 6 (Sabado).");
+                .WithMessage("El dia de la semana debe estar entre 1 (Lunes) y 7 (Domingo).");
 
             RuleFor(x => x)
                 .Must(dto => _rules.RangoHorarioEsValido(dto.HoraInicio, dto.HoraFin))

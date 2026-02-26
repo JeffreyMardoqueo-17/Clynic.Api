@@ -27,11 +27,11 @@ namespace Clynic.Application.Rules
         }
 
         /// <summary>
-        /// Valida que el dia de la semana sea valido (0 = Domingo, 6 = Sabado)
+        /// Valida que el dia de la semana sea valido (1 = Lunes, 7 = Domingo)
         /// </summary>
         public bool DiaSemanaEsValido(int diaSemana)
         {
-            return diaSemana >= 0 && diaSemana <= 6;
+            return diaSemana >= 1 && diaSemana <= 7;
         }
 
         /// <summary>
@@ -45,9 +45,9 @@ namespace Clynic.Application.Rules
         /// <summary>
         /// Valida que no exista cruce de horarios para la misma sucursal y dia
         /// </summary>
-        public async Task<bool> NoExisteCruceHorarioAsync(int idSucursal, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin)
+        public async Task<bool> NoExisteCruceHorarioAsync(int idSucursal, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin, int? idExcluir = null)
         {
-            var existeCruce = await _horarioRepository.ExisteCruceHorarioAsync(idSucursal, diaSemana, horaInicio, horaFin);
+            var existeCruce = await _horarioRepository.ExisteCruceHorarioAsync(idSucursal, diaSemana, horaInicio, horaFin, idExcluir);
             return !existeCruce;
         }
     }

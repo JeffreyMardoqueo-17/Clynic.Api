@@ -36,6 +36,13 @@ namespace Clynic.Application.Validators
                     .IsInEnum()
                     .WithMessage("El rol especificado no es válido");
             });
+
+            When(x => x.IdSucursal.HasValue, () =>
+            {
+                RuleFor(x => x.IdSucursal!.Value)
+                    .GreaterThan(0)
+                    .WithMessage("El ID de la sucursal debe ser mayor a 0");
+            });
         }
     }
 }

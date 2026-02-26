@@ -18,15 +18,66 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .OrderBy(u => u.NombreCompleto)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Usuario>> ObtenerPorClinicaAsync(int idClinica)
+        public async Task<IEnumerable<Usuario>> ObtenerPorClinicaAsync(int idClinica, string? busquedaNombre = null)
         {
-            return await _context.Usuarios
+            var query = _context.Usuarios
                 .Include(u => u.Clinica)
-                .Where(u => u.IdClinica == idClinica)
+                .Include(u => u.Sucursal)
+                .Where(u => u.IdClinica == idClinica && u.Activo);
+
+            if (!string.IsNullOrWhiteSpace(busquedaNombre))
+            {
+                var search = busquedaNombre.Trim().ToLower();
+                query = query.Where(u => u.NombreCompleto.ToLower().Contains(search));
+            }
+
+            return await query
+                .OrderBy(u => u.NombreCompleto)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Usuario>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal, string? busquedaNombre = null)
+        {
+            var query = _context.Usuarios
+                .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
+                .Where(u => u.IdClinica == idClinica && u.IdSucursal == idSucursal && u.Activo);
+
+            if (!string.IsNullOrWhiteSpace(busquedaNombre))
+            {
+                var search = busquedaNombre.Trim().ToLower();
+                query = query.Where(u => u.NombreCompleto.ToLower().Contains(search));
+            }
+
+            return await query
+                .OrderBy(u => u.NombreCompleto)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Usuario>> ObtenerInactivosPorClinicaAsync(int idClinica, int? idSucursal = null, string? busquedaNombre = null)
+        {
+            var query = _context.Usuarios
+                .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
+                .Where(u => u.IdClinica == idClinica && !u.Activo);
+
+            if (idSucursal.HasValue)
+            {
+                query = query.Where(u => u.IdSucursal == idSucursal.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(busquedaNombre))
+            {
+                var search = busquedaNombre.Trim().ToLower();
+                query = query.Where(u => u.NombreCompleto.ToLower().Contains(search));
+            }
+
+            return await query
                 .OrderBy(u => u.NombreCompleto)
                 .ToListAsync();
         }
@@ -35,6 +86,7 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
 
@@ -45,6 +97,7 @@ namespace Clynic.Infrastructure.Repositories
 
             return await _context.Usuarios
                 .Include(u => u.Clinica)
+                .Include(u => u.Sucursal)
                 .FirstOrDefaultAsync(u => u.Correo.ToLower() == correo.ToLower());
         }
 

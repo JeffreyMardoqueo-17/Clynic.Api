@@ -5,7 +5,9 @@ namespace Clynic.Application.Interfaces.Repositories
     public interface IUsuarioRepository
     {
         Task<IEnumerable<Usuario>> ObtenerTodosAsync();
-        Task<IEnumerable<Usuario>> ObtenerPorClinicaAsync(int idClinica);
+        Task<IEnumerable<Usuario>> ObtenerPorClinicaAsync(int idClinica, string? busquedaNombre = null);
+        Task<IEnumerable<Usuario>> ObtenerPorClinicaYSucursalAsync(int idClinica, int idSucursal, string? busquedaNombre = null);
+        Task<IEnumerable<Usuario>> ObtenerInactivosPorClinicaAsync(int idClinica, int? idSucursal = null, string? busquedaNombre = null);
         Task<Usuario?> ObtenerPorIdAsync(int id);
         Task<Usuario?> ObtenerPorCorreoAsync(string correo);
         Task<Usuario> CrearAsync(Usuario usuario);

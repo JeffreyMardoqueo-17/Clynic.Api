@@ -28,8 +28,18 @@ namespace Clynic.Application.Interfaces.Repositories
         Task<HorarioSucursal> CrearAsync(HorarioSucursal horario);
 
         /// <summary>
+        /// Actualiza un horario existente
+        /// </summary>
+        Task<HorarioSucursal> ActualizarAsync(HorarioSucursal horario);
+
+        /// <summary>
+        /// Elimina un horario por ID
+        /// </summary>
+        Task<bool> EliminarAsync(int id);
+
+        /// <summary>
         /// Verifica si existe cruce de horario en la misma sucursal y dia
         /// </summary>
-        Task<bool> ExisteCruceHorarioAsync(int idSucursal, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin);
+        Task<bool> ExisteCruceHorarioAsync(int idSucursal, int diaSemana, TimeSpan horaInicio, TimeSpan horaFin, int? idExcluir = null);
     }
 }

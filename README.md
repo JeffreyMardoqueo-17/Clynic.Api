@@ -43,7 +43,7 @@ Deberias ver:
 
 ### 5. Acceder a la aplicacion
 - **Swagger (API)**: http://localhost:8080/swagger
-- **Health Check**: http://localhost:8080/api/health/status
+- **Health Check**: http://localhost:8080/health/status
 
 ---
 
@@ -118,11 +118,11 @@ docker compose up -d
 - **Puerto**: `1433`
 - **Usuario**: `sa`
 - **Contrasena**: la de tu `.env`
-- **Base de datos**: `SistemaCitasClinicasSaaS`
+- **Base de datos**: `ClynicDB`
 
 **Connection String**:
 ```
-Server=localhost,1433;Database=SistemaCitasClinicasSaaS;User Id=sa;Password=<SQL_SA_PASSWORD>;TrustServerCertificate=True;
+Server=localhost,1433;Database=ClynicDB;User Id=sa;Password=<SQL_SA_PASSWORD>;TrustServerCertificate=True;
 ```
 
 ---

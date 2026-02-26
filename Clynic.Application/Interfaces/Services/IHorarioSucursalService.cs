@@ -26,5 +26,30 @@ namespace Clynic.Application.Interfaces.Services
         /// Crea un nuevo horario de sucursal
         /// </summary>
         Task<HorarioSucursalResponseDto> CrearAsync(CreateHorarioSucursalDto createDto);
+
+        /// <summary>
+        /// Actualiza un horario existente
+        /// </summary>
+        Task<HorarioSucursalResponseDto> ActualizarAsync(int id, UpdateHorarioSucursalDto updateDto);
+
+        /// <summary>
+        /// Elimina un horario existente
+        /// </summary>
+        Task<bool> EliminarAsync(int id);
+
+        /// <summary>
+        /// Obtiene los asuetos de una sucursal
+        /// </summary>
+        Task<IEnumerable<AsuetoSucursalResponseDto>> ObtenerAsuetosPorSucursalAsync(int idSucursal);
+
+        /// <summary>
+        /// Crea un asueto para una sucursal
+        /// </summary>
+        Task<AsuetoSucursalResponseDto> CrearAsuetoAsync(CreateAsuetoSucursalDto createDto);
+
+        /// <summary>
+        /// Elimina un asueto existente
+        /// </summary>
+        Task<bool> EliminarAsuetoAsync(int id);
     }
 }
