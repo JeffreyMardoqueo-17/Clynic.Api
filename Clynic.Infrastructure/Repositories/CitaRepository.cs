@@ -111,5 +111,61 @@ namespace Clynic.Infrastructure.Repositories
 
             return consulta;
         }
+
+        public async Task<int> ContarPorClinicaYFechaAsync(
+            int idClinica,
+            DateTime fechaDesdeInclusive,
+            DateTime fechaHastaExclusive,
+            int? idSucursal = null,
+            EstadoCita? estado = null)
+        {
+            var query = _context.Citas.Where(c =>
+                c.IdClinica == idClinica &&
+                c.FechaHoraInicioPlan >= fechaDesdeInclusive &&
+                c.FechaHoraInicioPlan < fechaHastaExclusive);
+
+            if (idSucursal.HasValue)
+            {
+                query = query.Where(c => c.IdSucursal == idSucursal.Value);
+            }
+
+            if (estado.HasValue)
+            {
+                query = query.Where(c => c.Estado == estado.Value);
+            }
+
+            return await query.CountAsync();
+        }
+
+        public async Task<IReadOnlyList<(DateTime Fecha, int Total)>> ObtenerTotalesPorDiaAsync(
+            int idClinica,
+            DateTime fechaDesdeInclusive,
+            DateTime fechaHastaExclusive,
+            int? idSucursal = null)
+        {
+            var query = _context.Citas.Where(c =>
+                c.IdClinica == idClinica &&
+                c.FechaHoraInicioPlan >= fechaDesdeInclusive &&
+                c.FechaHoraInicioPlan < fechaHastaExclusive);
+
+            if (idSucursal.HasValue)
+            {
+                query = query.Where(c => c.IdSucursal == idSucursal.Value);
+            }
+
+            var agregados = await query
+                .GroupBy(c => c.FechaHoraInicioPlan.Date)
+                .Select(g => new
+                {
+                    Fecha = g.Key,
+                    Total = g.Count()
+                })
+                .OrderBy(x => x.Fecha)
+                .ToListAsync();
+
+            return agregados
+                .Select(x => (x.Fecha, x.Total))
+                .ToList();
+        }
     }
 }

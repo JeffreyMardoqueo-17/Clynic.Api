@@ -82,6 +82,21 @@ namespace Clynic.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+            public async Task<int> ContarActivosPorClinicaAsync(int idClinica)
+            {
+                return await _context.Usuarios
+                .CountAsync(u => u.IdClinica == idClinica && u.Activo);
+            }
+
+            public async Task<int> ContarActivosPorClinicaYSucursalAsync(int idClinica, int idSucursal)
+            {
+                return await _context.Usuarios
+                    .CountAsync(u =>
+                        u.IdClinica == idClinica &&
+                        u.IdSucursal == idSucursal &&
+                        u.Activo);
+            }
+
         public async Task<Usuario?> ObtenerPorIdAsync(int id)
         {
             return await _context.Usuarios

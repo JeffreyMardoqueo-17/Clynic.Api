@@ -16,5 +16,16 @@ namespace Clynic.Application.Interfaces.Repositories
         Task<Cita> ActualizarAsync(Cita cita);
         Task<ConsultaMedica?> ObtenerConsultaPorCitaAsync(int idCita);
         Task<ConsultaMedica> CrearConsultaAsync(ConsultaMedica consulta);
+        Task<int> ContarPorClinicaYFechaAsync(
+            int idClinica,
+            DateTime fechaDesdeInclusive,
+            DateTime fechaHastaExclusive,
+            int? idSucursal = null,
+            EstadoCita? estado = null);
+        Task<IReadOnlyList<(DateTime Fecha, int Total)>> ObtenerTotalesPorDiaAsync(
+            int idClinica,
+            DateTime fechaDesdeInclusive,
+            DateTime fechaHastaExclusive,
+            int? idSucursal = null);
     }
 }

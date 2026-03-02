@@ -1,6 +1,7 @@
 services:
   sqlserver:
     container_name: clynic-sql
+    image: ${DOCKERHUB_USERNAME:-local}/clynic-sqlserver:${IMAGE_TAG:-VersionPrueba}
     build:
       context: .
       dockerfile: docker/sqlserver/Dockerfile
@@ -29,6 +30,7 @@ services:
 
   api:
     container_name: clynic-api
+    image: ${DOCKERHUB_USERNAME:-local}/clynic-api:${IMAGE_TAG:-VersionPrueba}
     build:
       context: .
       dockerfile: Clynic.Api/Dockerfile
@@ -47,6 +49,8 @@ services:
       - Email__Port=${EMAIL_PORT}
       - Email__Sender=${EMAIL_SENDER}
       - Email__Password=${EMAIL_PASSWORD}
+      - Cors__AllowedOrigins__0=http://localhost:3000
+      - Cors__AllowedOrigins__1=${FRONTEND_URL:-https://clynic-sys.vercel.app}
 
     depends_on:
       sqlserver:

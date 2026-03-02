@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Clynic.Application.DTOs.Usuarios;
+using Clynic.Application.DTOs.Clinicas;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Domain.Models;
 using System.Security.Claims;
@@ -14,6 +15,7 @@ namespace Clynic.Api.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IWebHostEnvironment _env;
+        private readonly IClinicaService _clinicaService;
         private readonly IUsuarioService _usuarioService;
         private readonly IEmailService _emailService;
         private readonly IVerificationCodeService _verificationCodeService;
@@ -21,6 +23,7 @@ namespace Clynic.Api.Controllers
 
         public AuthController(
             IAuthService authService,
+            IClinicaService clinicaService,
             IUsuarioService usuarioService,
             IEmailService emailService,
             IVerificationCodeService verificationCodeService,
@@ -28,11 +31,32 @@ namespace Clynic.Api.Controllers
             IWebHostEnvironment env)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _clinicaService = clinicaService ?? throw new ArgumentNullException(nameof(clinicaService));
             _usuarioService = usuarioService ?? throw new ArgumentNullException(nameof(usuarioService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _verificationCodeService = verificationCodeService ?? throw new ArgumentNullException(nameof(verificationCodeService));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+        }
+
+        [HttpPost("onboarding/clinic")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ClinicaResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<ClinicaResponseDto>> OnboardingCrearClinica([FromBody] CreateClinicaDto createDto)
+        {
+            if (createDto == null)
+            {
+                return BadRequest(new { mensaje = "Los datos de la clínica son requeridos" });
+            }
+
+            var clinicaCreada = await _clinicaService.CrearAsync(createDto);
+
+            return CreatedAtAction(
+                nameof(OnboardingCrearClinica),
+                new { id = clinicaCreada.Id },
+                clinicaCreada);
         }
 
         [HttpPost("register")]

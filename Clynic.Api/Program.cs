@@ -72,6 +72,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // DI - Business Rules
 builder.Services.AddScoped<ClinicaRules>();
@@ -181,12 +182,15 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // CORS
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:3000", "https://clynic-sys.vercel.app" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
