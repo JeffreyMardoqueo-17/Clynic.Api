@@ -191,6 +191,62 @@ namespace Clynic.Api.Controllers
             return Ok(actualizada);
         }
 
+        [HttpPatch("{id}/estado")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [ProducesResponseType(typeof(CitaResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<CitaResponseDto>> CambiarEstado(int id, [FromBody] CambiarEstadoCitaDto dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest(new { mensaje = "Los datos del cambio de estado son requeridos." });
+            }
+
+            var cita = await _citaService.ObtenerPorIdAsync(id);
+            if (cita == null)
+            {
+                return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
+            }
+
+            if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
+            {
+                return Forbid();
+            }
+
+            if (!User.IsInRole("Admin"))
+            {
+                if (!TryGetIdSucursalToken(out var idSucursalToken) || cita.IdSucursal != idSucursalToken)
+                {
+                    return Forbid();
+                }
+            }
+
+            var idUsuario = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(idUsuario, out var idUsuarioEjecutor) || idUsuarioEjecutor <= 0)
+            {
+                return Unauthorized(new { mensaje = "No se pudo identificar el usuario autenticado." });
+            }
+
+            var rolEjecutor = User.IsInRole("Admin")
+                ? UsuarioRol.Admin
+                : User.IsInRole("Doctor")
+                    ? UsuarioRol.Doctor
+                    : UsuarioRol.Recepcionista;
+
+            var actualizada = await _citaService.CambiarEstadoAsync(id, dto, rolEjecutor, idUsuarioEjecutor);
+            if (actualizada == null)
+            {
+                return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
+            }
+
+            return Ok(actualizada);
+        }
+
         [HttpPost("{id}/consulta")]
         [Authorize(Roles = "Admin,Doctor")]
         [ProducesResponseType(typeof(ConsultaMedicaResponseDto), StatusCodes.Status201Created)]

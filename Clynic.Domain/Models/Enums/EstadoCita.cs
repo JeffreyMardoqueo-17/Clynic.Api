@@ -5,6 +5,8 @@ namespace Clynic.Domain.Models.Enums
         Pendiente = 1,
         Confirmada = 2,
         Cancelada = 3,
-        Completada = 4
+        Completada = 4,
+        Presente = 5,
+        EnConsulta = 6
     }
 }

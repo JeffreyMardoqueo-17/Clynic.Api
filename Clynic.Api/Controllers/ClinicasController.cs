@@ -55,17 +55,11 @@ namespace Clynic.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ClinicaResponseDto>> ObtenerPorId(int id)
         {
-            if (id <= 0)
-            {
-                return BadRequest(new { mensaje = "El ID debe ser mayor a cero" });
-            }
 
             var clinica = await _clinicaService.ObtenerPorIdAsync(id);
 
             if (clinica == null)
-            {
                 return NotFound(new { mensaje = $"No se encontró la clínica con ID {id}" });
-            }
 
             return Ok(clinica);
         }
@@ -86,9 +80,9 @@ namespace Clynic.Api.Controllers
         public async Task<ActionResult<ClinicaResponseDto>> Crear([FromBody] CreateClinicaDto createDto)
         {
             if (createDto == null)
-            {
+        
                 return BadRequest(new { mensaje = "Los datos de la clínica son requeridos" });
-            }
+
 
             var clinicaCreada = await _clinicaService.CrearAsync(createDto);
 

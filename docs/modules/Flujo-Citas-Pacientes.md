@@ -63,6 +63,10 @@ Endpoints principales:
 - `GET /api/Citas/{id}`
 - `POST /api/Citas/interna`
 - `PUT /api/Citas/{id}/doctor`
+- `PATCH /api/Citas/{id}/estado`
+- `GET /api/CitaServicios/cita/{idCita}`
+- `POST /api/CitaServicios`
+- `DELETE /api/CitaServicios/{id}`
 
 ### Qué permite
 - Ver agenda por clínica con filtros.
@@ -95,6 +99,20 @@ Control de tenant:
 ---
 
 ## Flujo C: Atención médica y expediente
+### 0) Flujo operativo recepción → doctor → recepción
+1. Recepción valida llegada del paciente y cambia cita a `Presente`.
+2. Recepción (o doctor) cambia cita a `EnConsulta` para derivar a consulta médica.
+3. Doctor registra la consulta (`POST /api/Citas/{id}/consulta`) y la cita queda `Completada`.
+4. Si se requiere seguimiento, recepción agenda nueva cita interna (`POST /api/Citas/interna`).
+
+Endpoint de transición de estado:
+- `PATCH /api/Citas/{id}/estado`
+
+Roles permitidos por transición:
+- **Recepcionista**: `Pendiente/Confirmada -> Presente`, `Presente -> EnConsulta`, y cancelación operativa.
+- **Doctor**: `Presente/Confirmada -> EnConsulta`.
+- **Admin**: todas las transiciones.
+
 ### 1) Registrar consulta médica (Doctor/Admin)
 Endpoint: `POST /api/Citas/{id}/consulta`
 
@@ -113,6 +131,10 @@ Efecto:
 
 ### 2) Completar historial clínico del paciente
 Endpoint: `PUT /api/Pacientes/{id}/historial`
+
+Alternativa dedicada del módulo historial:
+- `GET /api/HistorialesClinicos/paciente/{idPaciente}`
+- `PUT /api/HistorialesClinicos/paciente/{idPaciente}`
 
 Guarda antecedentes persistentes:
 - Enfermedades previas

@@ -246,6 +246,34 @@ namespace Clynic.Application.Services
             return await _repository.EliminarAsync(id);
         }
 
+        public async Task<bool> ReenviarCredencialesTemporalesAsync(int id)
+        {
+            if (id <= 0)
+                throw new ArgumentException("El ID debe ser mayor a cero.", nameof(id));
+
+            var usuario = await _repository.ObtenerPorIdAsync(id);
+            if (usuario == null)
+                return false;
+
+            var claveTemporal = GenerarClaveTemporal(12);
+            usuario.ClaveHash = _passwordHasher.Hash(claveTemporal);
+            usuario.DebeCambiarClave = true;
+
+            await _repository.ActualizarAsync(usuario);
+
+            var clinica = await _clinicaRepository.ObtenerPorIdAsync(usuario.IdClinica);
+            var nombreClinica = clinica?.Nombre ?? "Clínica asignada";
+
+            await _emailService.EnviarCredencialesTemporalesAsync(
+                usuario.Correo,
+                usuario.NombreCompleto,
+                nombreClinica,
+                usuario.Rol.ToString(),
+                claveTemporal);
+
+            return true;
+        }
+
         public async Task<bool> CambiarClaveAsync(int id, ChangePasswordDto changePasswordDto)
         {
             if (id <= 0)

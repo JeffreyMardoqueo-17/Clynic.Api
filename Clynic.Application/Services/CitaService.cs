@@ -332,6 +332,68 @@ namespace Clynic.Application.Services
             return MapToResponseDto(actualizada);
         }
 
+        public async Task<CitaResponseDto?> CambiarEstadoAsync(int idCita, CambiarEstadoCitaDto dto, UsuarioRol rolEjecutor, int idUsuarioEjecutor)
+        {
+            if (idCita <= 0)
+            {
+                throw new ArgumentException("El ID de la cita debe ser mayor a cero.", nameof(idCita));
+            }
+
+            if (idUsuarioEjecutor <= 0)
+            {
+                throw new ArgumentException("El ID del usuario ejecutor debe ser mayor a cero.", nameof(idUsuarioEjecutor));
+            }
+
+            if (dto == null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            var cita = await _citaRepository.ObtenerPorIdAsync(idCita);
+            if (cita == null)
+            {
+                return null;
+            }
+
+            if (cita.Estado == EstadoCita.Cancelada || cita.Estado == EstadoCita.Completada)
+            {
+                throw new InvalidOperationException("No se puede cambiar el estado de una cita cancelada o completada.");
+            }
+
+            if (!EsTransicionPermitida(cita.Estado, dto.NuevoEstado, rolEjecutor))
+            {
+                throw new UnauthorizedAccessException("No tienes permisos para realizar esta transición de estado.");
+            }
+
+            if (dto.NuevoEstado == EstadoCita.EnConsulta)
+            {
+                if (!cita.IdDoctor.HasValue)
+                {
+                    throw new ValidationException("La cita debe tener doctor asignado para pasar a consulta.");
+                }
+
+                cita.FechaHoraInicioReal ??= DateTime.UtcNow;
+            }
+
+            if (dto.NuevoEstado == EstadoCita.Presente)
+            {
+                cita.FechaHoraInicioReal ??= DateTime.UtcNow;
+            }
+
+            cita.Estado = dto.NuevoEstado;
+
+            if (!string.IsNullOrWhiteSpace(dto.NotasOperacion))
+            {
+                var nota = dto.NotasOperacion.Trim();
+                cita.Notas = string.IsNullOrWhiteSpace(cita.Notas)
+                    ? nota
+                    : $"{cita.Notas} | {nota}";
+            }
+
+            var actualizada = await _citaRepository.ActualizarAsync(cita);
+            return MapToResponseDto(actualizada);
+        }
+
         public async Task<ConsultaMedicaResponseDto> RegistrarConsultaAsync(int idCita, int idDoctorEjecutor, RegistrarConsultaMedicaDto dto)
         {
             if (idCita <= 0)
@@ -359,6 +421,11 @@ namespace Clynic.Application.Services
             var cita = await _citaRepository.ObtenerPorIdAsync(idCita)
                 ?? throw new KeyNotFoundException($"No se encontró la cita con ID {idCita}.");
 
+            if (cita.Estado == EstadoCita.Cancelada || cita.Estado == EstadoCita.Completada)
+            {
+                throw new InvalidOperationException("La cita no está disponible para registrar consulta.");
+            }
+
             var consultaExistente = await _citaRepository.ObtenerConsultaPorCitaAsync(idCita);
             if (consultaExistente != null)
             {
@@ -376,6 +443,17 @@ namespace Clynic.Application.Services
             if (usuarioEjecutor.Rol != UsuarioRol.Doctor && usuarioEjecutor.Rol != UsuarioRol.Admin)
             {
                 throw new UnauthorizedAccessException("Solo un doctor o admin puede registrar una consulta.");
+            }
+
+            if (usuarioEjecutor.Rol == UsuarioRol.Doctor && cita.IdDoctor.HasValue && cita.IdDoctor.Value != usuarioEjecutor.Id)
+            {
+                throw new UnauthorizedAccessException("Solo el doctor asignado puede registrar la consulta de esta cita.");
+            }
+
+            if (cita.Estado == EstadoCita.Presente || cita.Estado == EstadoCita.Confirmada)
+            {
+                cita.Estado = EstadoCita.EnConsulta;
+                cita.FechaHoraInicioReal ??= DateTime.UtcNow;
             }
 
             var idDoctorAtencion = cita.IdDoctor ?? (usuarioEjecutor.Rol == UsuarioRol.Doctor ? usuarioEjecutor.Id : null);
@@ -408,6 +486,30 @@ namespace Clynic.Application.Services
             await _citaRepository.ActualizarAsync(cita);
 
             return MapConsultaToResponseDto(consultaCreada);
+        }
+
+        private static bool EsTransicionPermitida(EstadoCita estadoActual, EstadoCita estadoNuevo, UsuarioRol rolEjecutor)
+        {
+            if (estadoActual == estadoNuevo)
+            {
+                return true;
+            }
+
+            if (rolEjecutor == UsuarioRol.Admin)
+            {
+                return true;
+            }
+
+            return rolEjecutor switch
+            {
+                UsuarioRol.Recepcionista =>
+                    (estadoActual == EstadoCita.Pendiente || estadoActual == EstadoCita.Confirmada) && estadoNuevo == EstadoCita.Presente
+                    || estadoActual == EstadoCita.Presente && estadoNuevo == EstadoCita.EnConsulta
+                    || (estadoActual == EstadoCita.Pendiente || estadoActual == EstadoCita.Confirmada || estadoActual == EstadoCita.Presente) && estadoNuevo == EstadoCita.Cancelada,
+                UsuarioRol.Doctor =>
+                    (estadoActual == EstadoCita.Presente || estadoActual == EstadoCita.Confirmada) && estadoNuevo == EstadoCita.EnConsulta,
+                _ => false
+            };
         }
 
         private static CitaResponseDto MapToResponseDto(Cita cita)
