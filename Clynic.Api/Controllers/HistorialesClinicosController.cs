@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor")]
+    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta")]
     public class HistorialesClinicosController : ControllerBase
     {
         private readonly IHistorialClinicoService _historialClinicoService;

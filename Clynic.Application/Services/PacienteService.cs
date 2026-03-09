@@ -75,6 +75,7 @@ namespace Clynic.Application.Services
             paciente.Telefono = dto.Telefono.Trim();
             paciente.Correo = dto.Correo.Trim().ToLower();
             paciente.FechaNacimiento = dto.FechaNacimiento?.Date;
+            paciente.IdEspecialidad = dto.IdEspecialidad;
 
             var actualizado = await _pacienteRepository.ActualizarAsync(paciente);
             return MapToResponseDto(actualizado);
@@ -144,6 +145,8 @@ namespace Clynic.Application.Services
                 Apellidos = paciente.Apellidos,
                 Telefono = paciente.Telefono,
                 Correo = paciente.Correo,
+                IdEspecialidad = paciente.IdEspecialidad,
+                NombreEspecialidad = paciente.Especialidad?.Nombre,
                 FechaNacimiento = paciente.FechaNacimiento,
                 FechaRegistro = paciente.FechaRegistro,
                 HistorialClinico = paciente.HistorialClinico != null

@@ -4,30 +4,53 @@ GO
 PRINT 'Insertando datos semilla...';
 GO
 
-/* Insertar Clínicas */
-INSERT INTO Clinica (Nombre, Telefono, Direccion, Activa, FechaCreacion)
-VALUES 
-    ('Clínica Central', '123-456-7890', 'Av. Principal 100', 1, GETDATE()),
-    ('Clínica Norte', '123-456-7891', 'Calle Norte 200', 1, GETDATE()),
-    ('Clínica Sur', '123-456-7892', 'Av. Sur 300', 1, GETDATE());
+IF OBJECT_ID(N'Rol', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM Rol WHERE LOWER(Nombre) = 'admin')
+BEGIN
+    INSERT INTO Rol (IdClinica, IdSucursal, Nombre, Descripcion, Activo)
+    VALUES (NULL, NULL, 'Admin', 'Usuario global administrador', 1);
+END
 GO
 
-/* Insertar Sucursales */
-INSERT INTO Sucursal (IdClinica, Nombre, Direccion, Activa)
-VALUES 
-    (1, 'Sucursal Centro', 'Centro Comercial 1', 1),
-    (1, 'Sucursal Este', 'Zona Este', 1),
-    (2, 'Sucursal Principal', 'Av. Principal 200', 1);
+IF OBJECT_ID(N'Especialidad', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'encargado global')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Encargado Global', 'Especialidad global para administradores', 1);
+END
 GO
 
--- /* Insertar Usuarios */
--- INSERT INTO Usuario (IdClinica, NombreCompleto, Correo, ClaveHash, Rol, Activo, FechaCreacion)
--- VALUES 
---     (1, 'Administrador General', 'admin@clinica1.com', 'hashed_password_123', 'ADMIN', 1, GETDATE()),
---     (1, 'Dr. Juan Pérez', 'juan@clinica1.com', 'hashed_password_456', 'DOCTOR', 1, GETDATE()),
---     (2, 'Administrador Clínica 2', 'admin@clinica2.com', 'hashed_password_789', 'ADMIN', 1, GETDATE());
--- GO
+DECLARE @IdRolAdmin INT;
+DECLARE @IdEspecialidadAdmin INT;
 
-PRINT '✅ Datos semilla insertados correctamente.';
+IF OBJECT_ID(N'Rol', N'U') IS NOT NULL
+BEGIN
+    SELECT TOP 1 @IdRolAdmin = Id
+    FROM Rol
+    WHERE LOWER(Nombre) = 'admin';
+END
+
+IF OBJECT_ID(N'Especialidad', N'U') IS NOT NULL
+BEGIN
+    SELECT TOP 1 @IdEspecialidadAdmin = Id
+    FROM Especialidad
+    WHERE LOWER(Nombre) = 'encargado global';
+END
+
+IF @IdRolAdmin IS NOT NULL
+   AND @IdEspecialidadAdmin IS NOT NULL
+   AND OBJECT_ID(N'RolEspecialidad', N'U') IS NOT NULL
+   AND NOT EXISTS (
+        SELECT 1
+        FROM RolEspecialidad
+        WHERE IdRol = @IdRolAdmin
+          AND IdEspecialidad = @IdEspecialidadAdmin
+   )
+BEGIN
+    INSERT INTO RolEspecialidad (IdRol, IdEspecialidad, Activa)
+    VALUES (@IdRolAdmin, @IdEspecialidadAdmin, 1);
+END
 GO
 
+PRINT 'Datos semilla listos: Rol Admin + Especialidad Encargado Global + RolEspecialidad.';
+GO

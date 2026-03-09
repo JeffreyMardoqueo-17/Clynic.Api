@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Clynic.Domain.Models.Enums;
-
+using System.Text.Json.Serialization;
 namespace Clynic.Application.DTOs.Usuarios
 {
     public class RegisterDto
@@ -26,6 +25,29 @@ namespace Clynic.Application.DTOs.Usuarios
         public int? IdSucursal { get; set; }
 
         [Required(ErrorMessage = "El rol es obligatorio")]
-        public UsuarioRol Rol { get; set; } = UsuarioRol.Doctor;
+        [Range(1, int.MaxValue, ErrorMessage = "El ID del rol debe ser mayor a 0")]
+        public int IdRol { get; set; }
+
+        // Compatibilidad con clientes antiguos que envian `rol` en lugar de `idRol`.
+        [JsonPropertyName("rol")]
+        public int? RolCompat
+        {
+            get => null;
+            set
+            {
+                if (!value.HasValue)
+                {
+                    return;
+                }
+
+                if (IdRol <= 0)
+                {
+                    IdRol = value.Value;
+                }
+            }
+        }
+
+        [Range(1, int.MaxValue, ErrorMessage = "El ID de la especialidad debe ser mayor a 0")]
+        public int? IdEspecialidad { get; set; }
     }
 }

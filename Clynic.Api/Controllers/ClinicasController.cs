@@ -11,7 +11,6 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("/[controller]")]
     [Produces("application/json")]
-    [Authorize]
     public class ClinicasController : ControllerBase
     {
         private readonly IClinicaService _clinicaService;
@@ -48,7 +47,7 @@ namespace Clynic.Api.Controllers
         /// <response code="400">ID inválido</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(ClinicaResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -64,32 +63,5 @@ namespace Clynic.Api.Controllers
             return Ok(clinica);
         }
 
-        /// <summary>
-        /// Crea una nueva clínica
-        /// </summary>
-        /// <param name="createDto">Datos de la nueva clínica</param>
-        /// <returns>La clínica creada</returns>
-        /// <response code="201">Clínica creada exitosamente</response>
-        /// <response code="400">Datos de entrada inválidos</response>
-        /// <response code="500">Error interno del servidor</response>
-        [HttpPost]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(ClinicaResponseDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ClinicaResponseDto>> Crear([FromBody] CreateClinicaDto createDto)
-        {
-            if (createDto == null)
-        
-                return BadRequest(new { mensaje = "Los datos de la clínica son requeridos" });
-
-
-            var clinicaCreada = await _clinicaService.CrearAsync(createDto);
-
-            return CreatedAtAction(
-                nameof(ObtenerPorId),
-                new { id = clinicaCreada.Id },
-                clinicaCreada);
-        }
     }
 }

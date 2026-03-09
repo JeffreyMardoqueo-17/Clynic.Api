@@ -26,9 +26,7 @@ namespace Clynic.Application.Validators
                 .EmailAddress()
                 .WithMessage("El formato del correo no es válido")
                 .MaximumLength(150)
-                .WithMessage("El correo no puede exceder 150 caracteres")
-                .MustAsync(async (correo, cancellation) => await _rules.CorreoEsUnicoAsync(correo))
-                .WithMessage("Ya existe un usuario con este correo electrónico");
+                .WithMessage("El correo no puede exceder 150 caracteres");
 
             RuleFor(x => x.Clave)
                 .NotEmpty()
@@ -48,9 +46,16 @@ namespace Clynic.Application.Validators
                 .MustAsync(async (idClinica, cancellation) => await _rules.ClinicaExisteAsync(idClinica))
                 .WithMessage("La clínica especificada no existe");
 
-            RuleFor(x => x.Rol)
-                .IsInEnum()
-                .WithMessage("El rol especificado no es válido");
+            RuleFor(x => x.IdRol)
+                .GreaterThan(0)
+                .WithMessage("El ID del rol es obligatorio y debe ser mayor a 0");
+
+            When(x => x.IdEspecialidad.HasValue, () =>
+            {
+                RuleFor(x => x.IdEspecialidad!.Value)
+                    .GreaterThan(0)
+                    .WithMessage("El ID de la especialidad debe ser mayor a 0");
+            });
 
             When(x => x.IdSucursal.HasValue, () =>
             {

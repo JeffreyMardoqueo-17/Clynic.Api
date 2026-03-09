@@ -32,12 +32,18 @@ namespace Clynic.Application.Services
             if (usuario == null)
                 throw new ArgumentNullException(nameof(usuario));
 
+            var rolNombre = usuario.Rol?.Nombre ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(rolNombre))
+            {
+                throw new InvalidOperationException("El usuario no tiene un rol válido asignado.");
+            }
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                 new Claim(ClaimTypes.Name, usuario.NombreCompleto),
                 new Claim(ClaimTypes.Email, usuario.Correo),
-                new Claim(ClaimTypes.Role, usuario.Rol.ToString()),
+                new Claim(ClaimTypes.Role, rolNombre),
                 new Claim("IdClinica", usuario.IdClinica.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };

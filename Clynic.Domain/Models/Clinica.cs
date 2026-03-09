@@ -17,6 +17,10 @@ namespace Clynic.Domain.Models
             = new List<Sucursal>();
         public ICollection<Usuario> Usuarios { get; set; }
             = new List<Usuario>();
+        public ICollection<Rol> Roles { get; set; }
+            = new List<Rol>();
+        public ICollection<Especialidad> Especialidades { get; set; }
+            = new List<Especialidad>();
         public ICollection<Servicio> Servicios { get; set; }
             = new List<Servicio>();
         public ICollection<Paciente> Pacientes { get; set; }

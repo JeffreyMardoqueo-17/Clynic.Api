@@ -11,6 +11,8 @@ namespace Clynic.Application.DTOs.Pacientes
         public string NombreCompleto => $"{Nombres} {Apellidos}".Trim();
         public string Telefono { get; set; } = string.Empty;
         public string Correo { get; set; } = string.Empty;
+        public int? IdEspecialidad { get; set; }
+        public string? NombreEspecialidad { get; set; }
         public DateTime? FechaNacimiento { get; set; }
         public DateTime FechaRegistro { get; set; }
         public HistorialClinicoResponseDto? HistorialClinico { get; set; }

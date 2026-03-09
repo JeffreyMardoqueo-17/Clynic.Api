@@ -20,6 +20,8 @@ using Clynic.Application.DTOs.HistorialesClinicos;
 using Clynic.Application.DTOs.Pacientes;
 using Clynic.Application.Validators;
 using Clynic.Api.Middlewares;
+using Clynic.Api.Hubs;
+using Clynic.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,11 +59,16 @@ builder.Services.AddScoped<IHorarioSucursalRepository, HorarioSucursalRepository
 builder.Services.AddScoped<IAsuetoSucursalRepository, AsuetoSucursalRepository>();
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IRolRepository, RolRepository>();
+builder.Services.AddScoped<IRolEspecialidadRepository, RolEspecialidadRepository>();
+builder.Services.AddScoped<IEspecialidadRepository, EspecialidadRepository>();
+builder.Services.AddScoped<ISucursalEspecialidadRepository, SucursalEspecialidadRepository>();
 builder.Services.AddScoped<ICodigoVerificacionRepository, CodigoVerificacionRepository>();
 builder.Services.AddScoped<IPacienteRepository, PacienteRepository>();
 builder.Services.AddScoped<ICitaRepository, CitaRepository>();
 builder.Services.AddScoped<ICitaServicioRepository, CitaServicioRepository>();
 builder.Services.AddScoped<IHistorialClinicoRepository, HistorialClinicoRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // DI - Services
 builder.Services.AddScoped<IClinicaService, ClinicaService>();
@@ -69,6 +76,7 @@ builder.Services.AddScoped<ISucursalService, SucursalService>();
 builder.Services.AddScoped<IHorarioSucursalService, HorarioSucursalService>();
 builder.Services.AddScoped<IServicioService, ServicioService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<ICatalogoPersonalService, CatalogoPersonalService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -79,6 +87,7 @@ builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<ICitaServicioService, CitaServicioService>();
 builder.Services.AddScoped<IHistorialClinicoService, HistorialClinicoService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IDoctorNotificationService, DoctorNotificationService>();
 
 // DI - Business Rules
 builder.Services.AddScoped<ClinicaRules>();
@@ -98,6 +107,7 @@ builder.Services.AddScoped<IValidator<CreateAsuetoSucursalDto>, CreateAsuetoSucu
 builder.Services.AddScoped<IValidator<CreateServicioDto>, CreateServicioDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateServicioDto>, UpdateServicioDtoValidator>();
 builder.Services.AddScoped<IValidator<RegisterDto>, RegisterDtoValidator>();
+builder.Services.AddScoped<IValidator<RegisterClinicDto>, RegisterClinicDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateUsuarioAdminDto>, CreateUsuarioAdminDtoValidator>();
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateUsuarioDto>, UpdateUsuarioDtoValidator>();
@@ -139,6 +149,15 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = context =>
         {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/doctor-queue"))
+            {
+                context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+
             if (string.IsNullOrWhiteSpace(context.Token) &&
                 context.Request.Cookies.TryGetValue("clynic_access_token", out var cookieToken))
             {
@@ -153,15 +172,18 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("AdminOrDoctor", policy => policy.RequireRole("Admin", "Doctor"));
+    options.AddPolicy("AdminOrDoctor", policy => policy.RequireRole("Admin", "Doctor", "Nutricionista", "Fisioterapeuta"));
 });
 
 // Controllers y API
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Clynic API", Version = "v1" });
+    // Evita colisiones cuando existen DTOs con el mismo nombre en namespaces distintos.
+    c.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name);
     
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -172,21 +194,8 @@ builder.Services.AddSwaggerGen(c =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Ingresa el token JWT con el prefijo 'Bearer '"
     });
-    
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+
+    c.OperationFilter<AuthorizeOperationFilter>();
 });
 
 // CORS
@@ -231,6 +240,122 @@ BEGIN
 
     CREATE UNIQUE INDEX UX_AsuetoSucursal_Sucursal_Fecha ON AsuetoSucursal(IdSucursal, Fecha);
 END
+
+IF EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'UX_Cita_Clinica_Sucursal_FechaHoraInicio_Activa'
+      AND object_id = OBJECT_ID('Cita')
+)
+BEGIN
+    DROP INDEX UX_Cita_Clinica_Sucursal_FechaHoraInicio_Activa ON Cita;
+END
+
+IF OBJECT_ID(N'Rol', N'U') IS NULL
+BEGIN
+    CREATE TABLE Rol (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdClinica INT NULL,
+        IdSucursal INT NULL,
+        Nombre NVARCHAR(80) NOT NULL,
+        Descripcion NVARCHAR(250) NULL,
+        Activo BIT NOT NULL DEFAULT 1
+    );
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Nombre' AND object_id = OBJECT_ID('Rol'))
+BEGIN
+    CREATE UNIQUE INDEX UX_Rol_Nombre ON Rol(Nombre);
+END
+
+IF OBJECT_ID(N'Especialidad', N'U') IS NULL
+BEGIN
+    CREATE TABLE Especialidad (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdClinica INT NULL,
+        Nombre NVARCHAR(100) NOT NULL,
+        Descripcion NVARCHAR(400) NULL,
+        Activa BIT NOT NULL DEFAULT 1
+    );
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+BEGIN
+    CREATE UNIQUE INDEX UX_Especialidad_Nombre ON Especialidad(Nombre);
+END
+
+IF OBJECT_ID(N'RolEspecialidad', N'U') IS NULL
+BEGIN
+    CREATE TABLE RolEspecialidad (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdRol INT NOT NULL,
+        IdEspecialidad INT NOT NULL,
+        Activa BIT NOT NULL DEFAULT 1,
+        CONSTRAINT UX_RolEspecialidad_Rol_Especialidad UNIQUE (IdRol, IdEspecialidad),
+        CONSTRAINT FK_RolEspecialidad_Rol FOREIGN KEY (IdRol) REFERENCES Rol(Id) ON DELETE CASCADE,
+        CONSTRAINT FK_RolEspecialidad_Especialidad FOREIGN KEY (IdEspecialidad) REFERENCES Especialidad(Id) ON DELETE CASCADE
+    );
+END
+
+IF OBJECT_ID(N'Usuario', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('Usuario', 'IdRol') IS NULL
+    BEGIN
+        ALTER TABLE Usuario ADD IdRol INT NULL;
+    END
+
+    IF COL_LENGTH('Usuario', 'IdEspecialidad') IS NULL
+    BEGIN
+        ALTER TABLE Usuario ADD IdEspecialidad INT NULL;
+    END
+END
+
+IF NOT EXISTS (SELECT 1 FROM Rol WHERE LOWER(Nombre) = 'admin')
+BEGIN
+    INSERT INTO Rol (IdClinica, IdSucursal, Nombre, Descripcion, Activo)
+    VALUES (NULL, NULL, 'Admin', 'Usuario global administrador', 1);
+END
+
+IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'encargado global')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Encargado Global', 'Especialidad global para administradores', 1);
+END
+
+DECLARE @AdminRolId INT;
+DECLARE @EspecialidadAdminId INT;
+
+SELECT TOP 1 @AdminRolId = Id FROM Rol WHERE LOWER(Nombre) = 'admin';
+SELECT TOP 1 @EspecialidadAdminId = Id FROM Especialidad WHERE LOWER(Nombre) = 'encargado global';
+
+IF @AdminRolId IS NOT NULL AND @EspecialidadAdminId IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1
+       FROM RolEspecialidad
+       WHERE IdRol = @AdminRolId
+         AND IdEspecialidad = @EspecialidadAdminId
+   )
+BEGIN
+    INSERT INTO RolEspecialidad (IdRol, IdEspecialidad, Activa)
+    VALUES (@AdminRolId, @EspecialidadAdminId, 1);
+END
+
+IF OBJECT_ID(N'Usuario', N'U') IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1
+       FROM sys.indexes
+       WHERE name = 'UX_Usuario_Clinica_Correo'
+         AND object_id = OBJECT_ID('Usuario')
+   )
+   AND NOT EXISTS (
+       SELECT 1
+       FROM Usuario
+       GROUP BY IdClinica, Correo
+       HAVING COUNT(*) > 1
+   )
+BEGIN
+    CREATE UNIQUE INDEX UX_Usuario_Clinica_Correo ON Usuario(IdClinica, Correo);
+END
 ");
         app.Logger.LogInformation("✅ Base de datos lista");
     }
@@ -255,6 +380,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<DoctorQueueHub>("/hubs/doctor-queue");
 
 // Log de inicio
 app.Logger.LogInformation("🚀 API iniciada en {Environment}", app.Environment.EnvironmentName);

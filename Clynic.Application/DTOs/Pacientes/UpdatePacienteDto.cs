@@ -21,5 +21,8 @@ namespace Clynic.Application.DTOs.Pacientes
         public string Correo { get; set; } = string.Empty;
 
         public DateTime? FechaNacimiento { get; set; }
+
+        [Range(1, int.MaxValue)]
+        public int? IdEspecialidad { get; set; }
     }
 }

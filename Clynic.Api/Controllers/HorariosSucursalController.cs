@@ -25,7 +25,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene todos los horarios
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<HorarioSucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<HorarioSucursalResponseDto>>> ObtenerTodos()
@@ -38,7 +38,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene un horario por su ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(HorarioSucursalResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -64,7 +64,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene los horarios de una sucursal
         /// </summary>
         [HttpGet("sucursal/{idSucursal}")]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<HorarioSucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -163,7 +163,7 @@ namespace Clynic.Api.Controllers
         /// Obtiene los asuetos de una sucursal
         /// </summary>
         [HttpGet("sucursal/{idSucursal}/asuetos")]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<AsuetoSucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Clynic.Application.DTOs.Usuarios;
-using Clynic.Application.DTOs.Clinicas;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Domain.Models;
 using System.Security.Claims;
@@ -9,13 +8,12 @@ using System.Security.Claims;
 namespace Clynic.Api.Controllers
 {
     [ApiController]
-    [Route("/[controller]")]
+    [Route("auth")]
     [Produces("application/json")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
         private readonly IWebHostEnvironment _env;
-        private readonly IClinicaService _clinicaService;
         private readonly IUsuarioService _usuarioService;
         private readonly IEmailService _emailService;
         private readonly IVerificationCodeService _verificationCodeService;
@@ -23,7 +21,6 @@ namespace Clynic.Api.Controllers
 
         public AuthController(
             IAuthService authService,
-            IClinicaService clinicaService,
             IUsuarioService usuarioService,
             IEmailService emailService,
             IVerificationCodeService verificationCodeService,
@@ -31,7 +28,6 @@ namespace Clynic.Api.Controllers
             IWebHostEnvironment env)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _clinicaService = clinicaService ?? throw new ArgumentNullException(nameof(clinicaService));
             _usuarioService = usuarioService ?? throw new ArgumentNullException(nameof(usuarioService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _verificationCodeService = verificationCodeService ?? throw new ArgumentNullException(nameof(verificationCodeService));
@@ -39,27 +35,8 @@ namespace Clynic.Api.Controllers
             _env = env ?? throw new ArgumentNullException(nameof(env));
         }
 
-        [HttpPost("onboarding/clinic")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(ClinicaResponseDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ClinicaResponseDto>> OnboardingCrearClinica([FromBody] CreateClinicaDto createDto)
-        {
-            if (createDto == null)
-            {
-                return BadRequest(new { mensaje = "Los datos de la clínica son requeridos" });
-            }
-
-            var clinicaCreada = await _clinicaService.CrearAsync(createDto);
-
-            return CreatedAtAction(
-                nameof(OnboardingCrearClinica),
-                new { id = clinicaCreada.Id },
-                clinicaCreada);
-        }
-
         [HttpPost("register")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -86,10 +63,38 @@ namespace Clynic.Api.Controllers
             return Ok(resultado);
         }
 
+        [HttpPost("register-clinic")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<AuthResponseDto>> RegisterClinic([FromBody] RegisterClinicDto registerClinicDto)
+        {
+            if (registerClinicDto == null)
+            {
+                return BadRequest(new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "Los datos de clínica y administrador son requeridos"
+                });
+            }
+
+            var resultado = await _authService.RegisterClinicAsync(registerClinicDto);
+
+            if (!resultado.Exito)
+            {
+                return BadRequest(resultado);
+            }
+
+            SetAuthCookie(resultado);
+            return Ok(resultado);
+        }
+
         // ==========================
         // LOGIN
         // ==========================
         [HttpPost("login")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
@@ -131,6 +136,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -177,6 +183,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPost("reset-password")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

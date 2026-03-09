@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
     public class CitaServiciosController : ControllerBase
     {
         private readonly ICitaServicioService _citaServicioService;

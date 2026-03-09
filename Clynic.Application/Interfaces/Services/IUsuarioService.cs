@@ -1,5 +1,4 @@
 using Clynic.Application.DTOs.Usuarios;
-using Clynic.Domain.Models.Enums;
 
 namespace Clynic.Application.Interfaces.Services
 {

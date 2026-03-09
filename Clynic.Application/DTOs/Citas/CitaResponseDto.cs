@@ -8,12 +8,15 @@ namespace Clynic.Application.DTOs.Citas
         public int IdClinica { get; set; }
         public int IdSucursal { get; set; }
         public int IdPaciente { get; set; }
+        public int IdEspecialidad { get; set; }
+        public string NombreEspecialidad { get; set; } = string.Empty;
         public int? IdDoctor { get; set; }
         public string NombrePaciente { get; set; } = string.Empty;
         public string CorreoPaciente { get; set; } = string.Empty;
         public string TelefonoPaciente { get; set; } = string.Empty;
         public DateTime FechaHoraInicioPlan { get; set; }
         public DateTime FechaHoraFinPlan { get; set; }
+        public int DuracionEstimadaMin { get; set; }
         public DateTime? FechaHoraInicioReal { get; set; }
         public DateTime? FechaHoraFinReal { get; set; }
         public EstadoCita Estado { get; set; }

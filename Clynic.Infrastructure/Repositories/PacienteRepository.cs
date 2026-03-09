@@ -19,6 +19,7 @@ namespace Clynic.Infrastructure.Repositories
             return await _context.Pacientes
                 .Include(p => p.HistorialClinico)
                 .Include(p => p.ConsultasMedicas)
+                .Include(p => p.Especialidad)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
@@ -32,6 +33,7 @@ namespace Clynic.Infrastructure.Repositories
             var correoNormalizado = correo.Trim().ToLower();
             return await _context.Pacientes
                 .Include(p => p.HistorialClinico)
+                .Include(p => p.Especialidad)
                 .FirstOrDefaultAsync(p => p.IdClinica == idClinica && p.Correo.ToLower() == correoNormalizado);
         }
 
@@ -40,6 +42,7 @@ namespace Clynic.Infrastructure.Repositories
             var query = _context.Pacientes
                 .Include(p => p.HistorialClinico)
                 .Include(p => p.ConsultasMedicas)
+                .Include(p => p.Especialidad)
                 .Where(p => p.IdClinica == idClinica);
 
             if (!string.IsNullOrWhiteSpace(busqueda))

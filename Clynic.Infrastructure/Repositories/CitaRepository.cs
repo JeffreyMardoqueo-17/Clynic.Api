@@ -2,6 +2,7 @@ using Clynic.Application.Interfaces.Repositories;
 using Clynic.Domain.Models;
 using Clynic.Domain.Models.Enums;
 using Clynic.Infrastructure.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Clynic.Infrastructure.Repositories
@@ -15,6 +16,59 @@ namespace Clynic.Infrastructure.Repositories
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<bool> ExisteTraslapeHorarioAsync(
+            int idClinica,
+            int idSucursal,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            int? idCitaExcluir = null)
+        {
+            var query = QueryCitasActivasConTraslape(idClinica, idSucursal, fechaHoraInicio, fechaHoraFin);
+
+            if (idCitaExcluir.HasValue)
+            {
+                query = query.Where(c => c.Id != idCitaExcluir.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+
+        public async Task<int> ContarTraslapesHorarioAsync(
+            int idClinica,
+            int idSucursal,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            int? idCitaExcluir = null)
+        {
+            var query = QueryCitasActivasConTraslape(idClinica, idSucursal, fechaHoraInicio, fechaHoraFin);
+
+            if (idCitaExcluir.HasValue)
+            {
+                query = query.Where(c => c.Id != idCitaExcluir.Value);
+            }
+
+            return await query.CountAsync();
+        }
+
+        public async Task<bool> ExisteTraslapeHorarioDoctorAsync(
+            int idClinica,
+            int idSucursal,
+            int idDoctor,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            int? idCitaExcluir = null)
+        {
+            var query = QueryCitasActivasConTraslape(idClinica, idSucursal, fechaHoraInicio, fechaHoraFin)
+                .Where(c => c.IdDoctor == idDoctor);
+
+            if (idCitaExcluir.HasValue)
+            {
+                query = query.Where(c => c.Id != idCitaExcluir.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+
         public async Task<Cita> CrearAsync(Cita cita)
         {
             if (cita == null)
@@ -24,8 +78,15 @@ namespace Clynic.Infrastructure.Repositories
 
             cita.FechaCreacion = DateTime.UtcNow;
 
-            await _context.Citas.AddAsync(cita);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.Citas.AddAsync(cita);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException dbEx) when (EsChoqueHorarioPorIndiceUnico(dbEx))
+            {
+                throw new InvalidOperationException("Ya existe una cita reservada para esa hora en esta sucursal. Selecciona otro horario.");
+            }
 
             return await ObtenerPorIdAsync(cita.Id)
                 ?? throw new InvalidOperationException("No se pudo recuperar la cita creada.");
@@ -35,6 +96,7 @@ namespace Clynic.Infrastructure.Repositories
         {
             return await _context.Citas
                 .Include(c => c.Paciente)
+                .Include(c => c.Especialidad)
                 .Include(c => c.CitaServicios)
                     .ThenInclude(cs => cs.Servicio)
                 .Include(c => c.ConsultaMedica)
@@ -50,6 +112,7 @@ namespace Clynic.Infrastructure.Repositories
         {
             var query = _context.Citas
                 .Include(c => c.Paciente)
+                .Include(c => c.Especialidad)
                 .Include(c => c.CitaServicios)
                     .ThenInclude(cs => cs.Servicio)
                 .Include(c => c.ConsultaMedica)
@@ -137,6 +200,51 @@ namespace Clynic.Infrastructure.Repositories
             return await query.CountAsync();
         }
 
+        public async Task<int> ContarCitasActivasEspecialidadDiaAsync(
+            int idClinica,
+            int idSucursal,
+            int idEspecialidad,
+            DateTime fechaDia,
+            int? idCitaExcluir = null)
+        {
+            var inicioDia = fechaDia.Date;
+            var finDia = inicioDia.AddDays(1);
+
+            var query = _context.Citas.Where(c =>
+                c.IdClinica == idClinica
+                && c.IdSucursal == idSucursal
+                && c.IdEspecialidad == idEspecialidad
+                && c.FechaHoraInicioPlan >= inicioDia
+                && c.FechaHoraInicioPlan < finDia
+                && c.Estado != EstadoCita.Cancelada);
+
+            if (idCitaExcluir.HasValue)
+            {
+                query = query.Where(c => c.Id != idCitaExcluir.Value);
+            }
+
+            return await query.CountAsync();
+        }
+
+        public async Task<int> ContarTraslapesEspecialidadHorarioAsync(
+            int idClinica,
+            int idSucursal,
+            int idEspecialidad,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            int? idCitaExcluir = null)
+        {
+            var query = QueryCitasActivasConTraslape(idClinica, idSucursal, fechaHoraInicio, fechaHoraFin)
+                .Where(c => c.IdEspecialidad == idEspecialidad);
+
+            if (idCitaExcluir.HasValue)
+            {
+                query = query.Where(c => c.Id != idCitaExcluir.Value);
+            }
+
+            return await query.CountAsync();
+        }
+
         public async Task<IReadOnlyList<(DateTime Fecha, int Total)>> ObtenerTotalesPorDiaAsync(
             int idClinica,
             DateTime fechaDesdeInclusive,
@@ -166,6 +274,37 @@ namespace Clynic.Infrastructure.Repositories
             return agregados
                 .Select(x => (x.Fecha, x.Total))
                 .ToList();
+        }
+
+        private static bool EsChoqueHorarioPorIndiceUnico(DbUpdateException ex)
+        {
+            if (ex.InnerException is not SqlException sqlEx)
+            {
+                return false;
+            }
+
+            var isUniqueViolation = sqlEx.Number is 2601 or 2627;
+            if (!isUniqueViolation)
+            {
+                return false;
+            }
+
+            return sqlEx.Message.Contains("UX_Cita_Clinica_Sucursal_FechaHoraInicio_Activa", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private IQueryable<Cita> QueryCitasActivasConTraslape(
+            int idClinica,
+            int idSucursal,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin)
+        {
+            return _context.Citas.Where(c =>
+                c.IdClinica == idClinica
+                && c.IdSucursal == idSucursal
+                && c.Estado != EstadoCita.Cancelada
+                && c.Estado != EstadoCita.Completada
+                && c.FechaHoraInicioPlan < fechaHoraFin
+                && c.FechaHoraFinPlan > fechaHoraInicio);
         }
     }
 }

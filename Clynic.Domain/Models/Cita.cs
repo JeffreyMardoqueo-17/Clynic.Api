@@ -15,6 +15,8 @@ namespace Clynic.Domain.Models
         public Sucursal? Sucursal { get; set; }
         public int IdPaciente { get; set; }
         public Paciente? Paciente { get; set; }
+        public int IdEspecialidad { get; set; }
+        public Especialidad? Especialidad { get; set; }
         public int? IdDoctor { get; set; }
         public Usuario? Doctor { get; set; }
         public DateTime FechaHoraInicioPlan { get; set; }

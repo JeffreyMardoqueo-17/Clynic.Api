@@ -34,6 +34,8 @@ namespace Clynic.Domain.Models
         }
         public string Telefono { get; set; } = string.Empty;
         public string Correo { get; set; } = string.Empty;
+        public int? IdEspecialidad { get; set; }
+        public Especialidad? Especialidad { get; set; }
         public DateTime? FechaNacimiento { get; set; }
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
         public HistorialClinico? HistorialClinico { get; set; }

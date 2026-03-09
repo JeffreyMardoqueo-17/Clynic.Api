@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
     public class PacientesController : ControllerBase
     {
         private readonly IPacienteService _pacienteService;
@@ -94,7 +94,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPut("{id}/historial")]
-        [Authorize(Roles = "Admin,Doctor")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta")]
         [ProducesResponseType(typeof(HistorialClinicoResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

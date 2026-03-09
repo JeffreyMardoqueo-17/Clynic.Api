@@ -13,6 +13,10 @@ namespace Clynic.Application.DTOs.Citas
         public int IdSucursal { get; set; }
 
         [Required]
+        [Range(1, int.MaxValue)]
+        public int IdEspecialidad { get; set; }
+
+        [Required]
         [StringLength(150, MinimumLength = 2)]
         public string Nombres { get; set; } = string.Empty;
 

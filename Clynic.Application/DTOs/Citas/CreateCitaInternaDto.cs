@@ -17,6 +17,10 @@ namespace Clynic.Application.DTOs.Citas
         [Range(1, int.MaxValue)]
         public int IdPaciente { get; set; }
 
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int IdEspecialidad { get; set; }
+
         [Range(1, int.MaxValue)]
         public int? IdDoctor { get; set; }
 

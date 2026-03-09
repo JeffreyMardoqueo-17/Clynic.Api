@@ -1,6 +1,4 @@
 using Clynic.Domain.Models;
-using Clynic.Domain.Models.Enums;
-
 namespace Clynic.Domain.Tests;
 
 public class UsuarioTests
@@ -13,7 +11,8 @@ public class UsuarioTests
         var after = DateTime.UtcNow;
 
         Assert.True(usuario.Activo);
-        Assert.Equal(UsuarioRol.Admin, usuario.Rol);
+        Assert.Equal(0, usuario.IdRol);
+        Assert.Null(usuario.Rol);
         Assert.InRange(usuario.FechaCreacion, before, after);
         Assert.NotNull(usuario.CitasComoDoctor);
         Assert.Empty(usuario.CitasComoDoctor);
@@ -29,13 +28,15 @@ public class UsuarioTests
             NombreCompleto = "Dra. Ana Perez",
             Correo = "ana@clynic.com",
             ClaveHash = "HASH",
-            Rol = UsuarioRol.Doctor
+            IdRol = 2,
+            IdEspecialidad = 1
         };
 
         Assert.Equal(2, usuario.IdClinica);
         Assert.Equal("Dra. Ana Perez", usuario.NombreCompleto);
         Assert.Equal("ana@clynic.com", usuario.Correo);
         Assert.Equal("HASH", usuario.ClaveHash);
-        Assert.Equal(UsuarioRol.Doctor, usuario.Rol);
+        Assert.Equal(2, usuario.IdRol);
+        Assert.Equal(1, usuario.IdEspecialidad);
     }
 }

@@ -29,7 +29,7 @@ namespace Clynic.Api.Controllers
         /// <response code="200">Retorna la lista de sucursales</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<SucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<SucursalResponseDto>>> ObtenerTodas()
@@ -39,7 +39,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpGet("clinica/{idClinica}")]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<SucursalResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -78,7 +78,7 @@ namespace Clynic.Api.Controllers
         /// <response code="400">ID invalido</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
         [ProducesResponseType(typeof(SucursalResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
