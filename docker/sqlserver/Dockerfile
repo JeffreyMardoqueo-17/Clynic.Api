@@ -26,6 +26,10 @@ WORKDIR /usr/config
 COPY docker/sqlserver/init.sql /usr/scripts/
 COPY docker/sqlserver/schema.sql /usr/scripts/
 COPY docker/sqlserver/seed-data.sql /usr/scripts/
+COPY docker/sqlserver/patch-usuario-sucursal.sql /usr/scripts/
+COPY docker/sqlserver/patch-usuario-rol-especialidad.sql /usr/scripts/
+COPY docker/sqlserver/patch-cita-especialidad.sql /usr/scripts/
+COPY docker/sqlserver/patch-landing-page-config.sql /usr/scripts/
 
 # Copiar y preparar entrypoint
 COPY docker/sqlserver/entrypoint.sh /usr/config/

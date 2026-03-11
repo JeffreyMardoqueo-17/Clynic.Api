@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Clynic.Application.DTOs.Usuarios;
 using Clynic.Application.Interfaces.Services;
@@ -105,7 +105,7 @@ namespace Clynic.Api.Controllers
 
             if (usuario == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -163,7 +163,7 @@ namespace Clynic.Api.Controllers
 
             if (updateDto == null)
             {
-                return BadRequest(new { mensaje = "Los datos de actualización son requeridos" });
+                return BadRequest(new { mensaje = "Los datos de actualizaciÃ³n son requeridos" });
             }
 
             var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -178,7 +178,7 @@ namespace Clynic.Api.Controllers
 
             if (resultado == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             return Ok(resultado);
@@ -203,10 +203,46 @@ namespace Clynic.Api.Controllers
 
             if (!eliminado)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             return NoContent();
+        }
+
+        [HttpPost("{id}/reenviar-invitacion")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ReenviarInvitacion(int id)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new { mensaje = "El ID debe ser mayor a cero" });
+            }
+
+            var usuario = await _usuarioService.ObtenerPorIdAsync(id);
+            if (usuario == null)
+            {
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
+            }
+
+            var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
+            if (!int.TryParse(idClinicaClaim, out var idClinicaToken) || idClinicaToken != usuario.IdClinica)
+            {
+                return Forbid();
+            }
+
+            var reenviado = await _usuarioService.ReenviarCredencialesTemporalesAsync(id);
+            if (!reenviado)
+            {
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
+            }
+
+            return Ok(new { mensaje = "InvitaciÃ³n reenviada correctamente" });
         }
 
         [HttpPut("{id}/cambiar-clave")]
@@ -242,7 +278,7 @@ namespace Clynic.Api.Controllers
 
                 if (!resultado)
                 {
-                    return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                    return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
                 }
 
                 return Ok(new { mensaje = "Clave actualizada exitosamente" });
@@ -254,3 +290,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

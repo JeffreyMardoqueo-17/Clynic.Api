@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace Clynic.Api.Controllers
 {
     [ApiController]
-    [Route("/[controller]")]
+    [Route("auth")]
     [Produces("application/json")]
     public class AuthController : ControllerBase
     {
@@ -36,6 +36,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -62,10 +63,38 @@ namespace Clynic.Api.Controllers
             return Ok(resultado);
         }
 
+        [HttpPost("register-clinic")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<AuthResponseDto>> RegisterClinic([FromBody] RegisterClinicDto registerClinicDto)
+        {
+            if (registerClinicDto == null)
+            {
+                return BadRequest(new AuthResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "Los datos de clínica y administrador son requeridos"
+                });
+            }
+
+            var resultado = await _authService.RegisterClinicAsync(registerClinicDto);
+
+            if (!resultado.Exito)
+            {
+                return BadRequest(resultado);
+            }
+
+            SetAuthCookie(resultado);
+            return Ok(resultado);
+        }
+
         // ==========================
         // LOGIN
         // ==========================
         [HttpPost("login")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
@@ -107,6 +136,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -153,6 +183,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPost("reset-password")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

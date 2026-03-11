@@ -1,5 +1,3 @@
-using Clynic.Domain.Models.Enums;
-
 namespace Clynic.Application.DTOs.Usuarios
 {
     public class UsuarioResponseDto
@@ -7,7 +5,11 @@ namespace Clynic.Application.DTOs.Usuarios
         public int Id { get; set; }
         public string NombreCompleto { get; set; } = string.Empty;
         public string Correo { get; set; } = string.Empty;
-        public UsuarioRol Rol { get; set; }
+        public int IdRol { get; set; }
+        public string NombreRol { get; set; } = string.Empty;
+        public string DescripcionRol { get; set; } = string.Empty;
+        public int? IdEspecialidad { get; set; }
+        public string? NombreEspecialidad { get; set; }
         public bool Activo { get; set; }
         public bool DebeCambiarClave { get; set; }
         public int IdClinica { get; set; }

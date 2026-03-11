@@ -13,6 +13,11 @@ namespace Clynic.Application.Interfaces.Services
         Task<IEnumerable<SucursalResponseDto>> ObtenerTodasAsync();
 
         /// <summary>
+        /// Obtiene sucursales activas de una clinica
+        /// </summary>
+        Task<IEnumerable<SucursalResponseDto>> ObtenerPorClinicaAsync(int idClinica);
+
+        /// <summary>
         /// Obtiene una sucursal por su ID
         /// </summary>
         Task<SucursalResponseDto?> ObtenerPorIdAsync(int id);

@@ -5,6 +5,31 @@ namespace Clynic.Application.Interfaces.Services
         Task EnviarCodigoVerificacionAsync(string emailDestino, string nombreUsuario, string codigo);
         Task EnviarBienvenidaUsuarioAsync(string emailDestino, string nombreUsuario, string nombreClinica, string rol);
         Task EnviarCredencialesTemporalesAsync(string emailDestino, string nombreUsuario, string nombreClinica, string rol, string claveTemporal);
+        Task EnviarConfirmacionCitaAgendadaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            IEnumerable<string> servicios,
+            string notas);
+        Task EnviarNotificacionCitaCanceladaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraInicio,
+            string motivo);
+        Task EnviarNotificacionCitaReprogramadaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraAnterior,
+            DateTime fechaHoraNuevaInicio,
+            DateTime fechaHoraNuevaFin,
+            string motivo);
         Task EnviarEmailAsync(string emailDestino, string asunto, string cuerpoHtml);
     }
 }

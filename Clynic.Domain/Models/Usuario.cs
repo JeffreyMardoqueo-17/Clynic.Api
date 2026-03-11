@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Clynic.Domain.Models.Enums;
-
 namespace Clynic.Domain.Models
 {
     public class Usuario
@@ -14,11 +12,16 @@ namespace Clynic.Domain.Models
         public string NombreCompleto { get; set; } = string.Empty;
         public string Correo { get; set; } = string.Empty;
         public string ClaveHash { get; set; } = string.Empty;
-        public UsuarioRol Rol { get; set; } = UsuarioRol.Admin;
+        public int IdRol { get; set; }
+        public Rol? Rol { get; set; }
+        public int? IdEspecialidad { get; set; }
+        public Especialidad? Especialidad { get; set; }
         public bool Activo { get; set; } = true;
         public bool DebeCambiarClave { get; set; } = false;
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
         public ICollection<Cita> CitasComoDoctor { get; set; }
             = new List<Cita>();
+        public ICollection<ConsultaMedica> ConsultasMedicasRealizadas { get; set; }
+            = new List<ConsultaMedica>();
     }
 }

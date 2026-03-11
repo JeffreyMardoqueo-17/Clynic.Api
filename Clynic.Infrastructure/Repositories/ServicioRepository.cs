@@ -17,6 +17,7 @@ namespace Clynic.Infrastructure.Repositories
         public async Task<IEnumerable<Servicio>> ObtenerPorClinicaAsync(int idClinica, string? nombre = null, bool incluirInactivos = false)
         {
             var query = _context.Servicios
+                .Include(s => s.Especialidad)
                 .Where(s => s.IdClinica == idClinica);
 
             if (!incluirInactivos)
@@ -37,7 +38,9 @@ namespace Clynic.Infrastructure.Repositories
 
         public async Task<Servicio?> ObtenerPorIdAsync(int id, bool incluirInactivos = false)
         {
-            var query = _context.Servicios.Where(s => s.Id == id);
+            var query = _context.Servicios
+                .Include(s => s.Especialidad)
+                .Where(s => s.Id == id);
 
             if (!incluirInactivos)
             {
@@ -57,7 +60,9 @@ namespace Clynic.Infrastructure.Repositories
             await _context.Servicios.AddAsync(servicio);
             await _context.SaveChangesAsync();
 
-            return servicio;
+            return await _context.Servicios
+                .Include(s => s.Especialidad)
+                .FirstAsync(s => s.Id == servicio.Id);
         }
 
         public async Task<Servicio> ActualizarAsync(Servicio servicio)
@@ -68,7 +73,9 @@ namespace Clynic.Infrastructure.Repositories
             _context.Servicios.Update(servicio);
             await _context.SaveChangesAsync();
 
-            return servicio;
+            return await _context.Servicios
+                .Include(s => s.Especialidad)
+                .FirstAsync(s => s.Id == servicio.Id);
         }
 
         public async Task<bool> EliminarAsync(int id)
@@ -99,6 +106,21 @@ namespace Clynic.Infrastructure.Repositories
         public async Task<bool> ExisteAsync(int id)
         {
             return await _context.Servicios.AnyAsync(s => s.Id == id && s.Activo);
+        }
+
+        public async Task<IReadOnlyCollection<Servicio>> ObtenerPorIdsClinicaAsync(int idClinica, IEnumerable<int> idsServicios)
+        {
+            var ids = idsServicios?.Distinct().ToList() ?? new List<int>();
+            if (ids.Count == 0)
+            {
+                return Array.Empty<Servicio>();
+            }
+
+            return await _context.Servicios
+                .Include(s => s.Especialidad)
+                .Where(s => s.IdClinica == idClinica && s.Activo && ids.Contains(s.Id))
+                .OrderBy(s => s.NombreServicio)
+                .ToListAsync();
         }
     }
 }

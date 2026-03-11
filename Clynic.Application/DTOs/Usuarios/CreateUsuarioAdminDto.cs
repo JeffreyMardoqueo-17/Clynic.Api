@@ -1,6 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Clynic.Domain.Models.Enums;
-
 namespace Clynic.Application.DTOs.Usuarios
 {
     public class CreateUsuarioAdminDto
@@ -22,6 +20,10 @@ namespace Clynic.Application.DTOs.Usuarios
         public int? IdSucursal { get; set; }
 
         [Required(ErrorMessage = "El rol es obligatorio")]
-        public UsuarioRol Rol { get; set; } = UsuarioRol.Doctor;
+        [Range(1, int.MaxValue, ErrorMessage = "El ID del rol debe ser mayor a 0")]
+        public int IdRol { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "El ID de la especialidad debe ser mayor a 0")]
+        public int? IdEspecialidad { get; set; }
     }
 }

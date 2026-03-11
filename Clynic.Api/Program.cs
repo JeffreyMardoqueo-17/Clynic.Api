@@ -14,8 +14,14 @@ using Clynic.Application.DTOs.HorariosSucursal;
 using Clynic.Application.DTOs.Servicios;
 using Clynic.Application.DTOs.Sucursales;
 using Clynic.Application.DTOs.Usuarios;
+using Clynic.Application.DTOs.Citas;
+using Clynic.Application.DTOs.CitaServicios;
+using Clynic.Application.DTOs.HistorialesClinicos;
+using Clynic.Application.DTOs.Pacientes;
 using Clynic.Application.Validators;
 using Clynic.Api.Middlewares;
+using Clynic.Api.Hubs;
+using Clynic.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +59,18 @@ builder.Services.AddScoped<IHorarioSucursalRepository, HorarioSucursalRepository
 builder.Services.AddScoped<IAsuetoSucursalRepository, AsuetoSucursalRepository>();
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IRolRepository, RolRepository>();
+builder.Services.AddScoped<IRolEspecialidadRepository, RolEspecialidadRepository>();
+builder.Services.AddScoped<IEspecialidadRepository, EspecialidadRepository>();
+builder.Services.AddScoped<ISucursalEspecialidadRepository, SucursalEspecialidadRepository>();
 builder.Services.AddScoped<ICodigoVerificacionRepository, CodigoVerificacionRepository>();
+builder.Services.AddScoped<ILandingPageConfigRepository, LandingPageConfigRepository>();
+builder.Services.AddScoped<IPacienteRepository, PacienteRepository>();
+builder.Services.AddScoped<ICitaRepository, CitaRepository>();
+builder.Services.AddScoped<ICitaActividadRepository, CitaActividadRepository>();
+builder.Services.AddScoped<ICitaServicioRepository, CitaServicioRepository>();
+builder.Services.AddScoped<IHistorialClinicoRepository, HistorialClinicoRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // DI - Services
 builder.Services.AddScoped<IClinicaService, ClinicaService>();
@@ -61,11 +78,19 @@ builder.Services.AddScoped<ISucursalService, SucursalService>();
 builder.Services.AddScoped<IHorarioSucursalService, HorarioSucursalService>();
 builder.Services.AddScoped<IServicioService, ServicioService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<ICatalogoPersonalService, CatalogoPersonalService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddScoped<IPacienteService, PacienteService>();
+builder.Services.AddScoped<ICitaService, CitaService>();
+builder.Services.AddScoped<ICitaServicioService, CitaServicioService>();
+builder.Services.AddScoped<IHistorialClinicoService, HistorialClinicoService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IDoctorNotificationService, DoctorNotificationService>();
+builder.Services.AddScoped<ILandingPageConfigService, LandingPageConfigService>();
 
 // DI - Business Rules
 builder.Services.AddScoped<ClinicaRules>();
@@ -73,6 +98,8 @@ builder.Services.AddScoped<SucursalRules>();
 builder.Services.AddScoped<HorarioSucursalRules>();
 builder.Services.AddScoped<ServicioRules>();
 builder.Services.AddScoped<UsuarioRules>();
+builder.Services.AddScoped<PacienteRules>();
+builder.Services.AddScoped<CitaRules>();
 
 // DI - Validators
 builder.Services.AddScoped<IValidator<CreateClinicaDto>, CreateClinicaDtoValidator>();
@@ -83,12 +110,21 @@ builder.Services.AddScoped<IValidator<CreateAsuetoSucursalDto>, CreateAsuetoSucu
 builder.Services.AddScoped<IValidator<CreateServicioDto>, CreateServicioDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateServicioDto>, UpdateServicioDtoValidator>();
 builder.Services.AddScoped<IValidator<RegisterDto>, RegisterDtoValidator>();
+builder.Services.AddScoped<IValidator<RegisterClinicDto>, RegisterClinicDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateUsuarioAdminDto>, CreateUsuarioAdminDtoValidator>();
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateUsuarioDto>, UpdateUsuarioDtoValidator>();
 builder.Services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordDtoValidator>();
 builder.Services.AddScoped<IValidator<ForgotPasswordDto>, ForgotPasswordDtoValidator>();
 builder.Services.AddScoped<IValidator<ResetPasswordDto>, ResetPasswordDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateCitaPublicaDto>, CreateCitaPublicaDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateCitaInternaDto>, CreateCitaInternaDtoValidator>();
+builder.Services.AddScoped<IValidator<RegistrarConsultaMedicaDto>, RegistrarConsultaMedicaDtoValidator>();
+builder.Services.AddScoped<IValidator<CreateCitaServicioDto>, CreateCitaServicioDtoValidator>();
+builder.Services.AddScoped<IValidator<CreatePacienteDto>, CreatePacienteDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdatePacienteDto>, UpdatePacienteDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateHistorialClinicoDto>, UpdateHistorialClinicoDtoValidator>();
+builder.Services.AddScoped<IValidator<UpsertHistorialClinicoDto>, UpsertHistorialClinicoDtoValidator>();
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
@@ -117,6 +153,15 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = context =>
         {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/doctor-queue"))
+            {
+                context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+
             if (string.IsNullOrWhiteSpace(context.Token) &&
                 context.Request.Cookies.TryGetValue("clynic_access_token", out var cookieToken))
             {
@@ -136,10 +181,13 @@ builder.Services.AddAuthorization(options =>
 
 // Controllers y API
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Clynic API", Version = "v1" });
+    // Evita colisiones cuando existen DTOs con el mismo nombre en namespaces distintos.
+    c.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name);
     
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -150,30 +198,20 @@ builder.Services.AddSwaggerGen(c =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Ingresa el token JWT con el prefijo 'Bearer '"
     });
-    
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+
+    c.OperationFilter<AuthorizeOperationFilter>();
 });
 
 // CORS
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:3000", "https://clynic-sys.vercel.app" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -206,6 +244,198 @@ BEGIN
 
     CREATE UNIQUE INDEX UX_AsuetoSucursal_Sucursal_Fecha ON AsuetoSucursal(IdSucursal, Fecha);
 END
+
+IF EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'UX_Cita_Clinica_Sucursal_FechaHoraInicio_Activa'
+      AND object_id = OBJECT_ID('Cita')
+)
+BEGIN
+    DROP INDEX UX_Cita_Clinica_Sucursal_FechaHoraInicio_Activa ON Cita;
+END
+
+IF OBJECT_ID(N'Rol', N'U') IS NULL
+BEGIN
+    CREATE TABLE Rol (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdClinica INT NULL,
+        IdSucursal INT NULL,
+        Nombre NVARCHAR(80) NOT NULL,
+        Descripcion NVARCHAR(250) NULL,
+        Activo BIT NOT NULL DEFAULT 1
+    );
+END
+
+IF OBJECT_ID(N'Rol', N'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM sys.key_constraints
+        WHERE [name] = 'UX_Rol_Nombre'
+          AND [type] = 'UQ'
+          AND parent_object_id = OBJECT_ID('Rol')
+    )
+    BEGIN
+        ALTER TABLE Rol DROP CONSTRAINT UX_Rol_Nombre;
+    END
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Nombre' AND object_id = OBJECT_ID('Rol'))
+    BEGIN
+        DROP INDEX UX_Rol_Nombre ON Rol;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = 'UX_Rol_Clinica_Sucursal_Nombre'
+          AND object_id = OBJECT_ID('Rol')
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM Rol
+        GROUP BY IdClinica, IdSucursal, Nombre
+        HAVING COUNT(*) > 1
+    )
+    BEGIN
+        CREATE UNIQUE INDEX UX_Rol_Clinica_Sucursal_Nombre ON Rol(IdClinica, IdSucursal, Nombre);
+    END
+END
+
+IF OBJECT_ID(N'Especialidad', N'U') IS NULL
+BEGIN
+    CREATE TABLE Especialidad (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdClinica INT NULL,
+        Nombre NVARCHAR(100) NOT NULL,
+        Descripcion NVARCHAR(400) NULL,
+        Activa BIT NOT NULL DEFAULT 1
+    );
+END
+
+IF OBJECT_ID(N'Especialidad', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('Especialidad', 'IdClinica') IS NULL
+    BEGIN
+        ALTER TABLE Especialidad ADD IdClinica INT NULL;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_Especialidad_Clinica'
+          AND parent_object_id = OBJECT_ID('Especialidad')
+    )
+    BEGIN
+        ALTER TABLE Especialidad
+        ADD CONSTRAINT FK_Especialidad_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id);
+    END
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+BEGIN
+    CREATE UNIQUE INDEX UX_Especialidad_Nombre ON Especialidad(Nombre);
+END
+
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+BEGIN
+    DROP INDEX UX_Especialidad_Nombre ON Especialidad;
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'UX_Especialidad_Clinica_Nombre'
+      AND object_id = OBJECT_ID('Especialidad')
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM Especialidad
+    GROUP BY IdClinica, Nombre
+    HAVING COUNT(*) > 1
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Especialidad_Clinica_Nombre ON Especialidad(IdClinica, Nombre);
+END
+
+IF OBJECT_ID(N'RolEspecialidad', N'U') IS NULL
+BEGIN
+    CREATE TABLE RolEspecialidad (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        IdRol INT NOT NULL,
+        IdEspecialidad INT NOT NULL,
+        Activa BIT NOT NULL DEFAULT 1,
+        CONSTRAINT UX_RolEspecialidad_Rol_Especialidad UNIQUE (IdRol, IdEspecialidad),
+        CONSTRAINT FK_RolEspecialidad_Rol FOREIGN KEY (IdRol) REFERENCES Rol(Id) ON DELETE CASCADE,
+        CONSTRAINT FK_RolEspecialidad_Especialidad FOREIGN KEY (IdEspecialidad) REFERENCES Especialidad(Id) ON DELETE CASCADE
+    );
+END
+
+IF OBJECT_ID(N'Usuario', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('Usuario', 'IdRol') IS NULL
+    BEGIN
+        ALTER TABLE Usuario ADD IdRol INT NULL;
+    END
+
+    IF COL_LENGTH('Usuario', 'IdEspecialidad') IS NULL
+    BEGIN
+        ALTER TABLE Usuario ADD IdEspecialidad INT NULL;
+    END
+END
+
+IF NOT EXISTS (SELECT 1 FROM Rol WHERE LOWER(Nombre) = 'admin')
+BEGIN
+    INSERT INTO Rol (IdClinica, IdSucursal, Nombre, Descripcion, Activo)
+    VALUES (NULL, NULL, 'Admin', 'Usuario global administrador', 1);
+END
+
+IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'encargado global')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Encargado Global', 'Especialidad global para administradores', 1);
+END
+
+IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'atencion al cliente')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Atencion al Cliente', 'Especialidad global por defecto para recepción', 1);
+END
+
+DECLARE @AdminRolId INT;
+DECLARE @EspecialidadAdminId INT;
+
+SELECT TOP 1 @AdminRolId = Id FROM Rol WHERE LOWER(Nombre) = 'admin';
+SELECT TOP 1 @EspecialidadAdminId = Id FROM Especialidad WHERE LOWER(Nombre) = 'encargado global';
+
+IF @AdminRolId IS NOT NULL AND @EspecialidadAdminId IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1
+       FROM RolEspecialidad
+       WHERE IdRol = @AdminRolId
+         AND IdEspecialidad = @EspecialidadAdminId
+   )
+BEGIN
+    INSERT INTO RolEspecialidad (IdRol, IdEspecialidad, Activa)
+    VALUES (@AdminRolId, @EspecialidadAdminId, 1);
+END
+
+IF OBJECT_ID(N'Usuario', N'U') IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1
+       FROM sys.indexes
+       WHERE name = 'UX_Usuario_Clinica_Correo'
+         AND object_id = OBJECT_ID('Usuario')
+   )
+   AND NOT EXISTS (
+       SELECT 1
+       FROM Usuario
+       GROUP BY IdClinica, Correo
+       HAVING COUNT(*) > 1
+   )
+BEGIN
+    CREATE UNIQUE INDEX UX_Usuario_Clinica_Correo ON Usuario(IdClinica, Correo);
+END
 ");
         app.Logger.LogInformation("✅ Base de datos lista");
     }
@@ -230,6 +460,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<DoctorQueueHub>("/hubs/doctor-queue");
 
 // Log de inicio
 app.Logger.LogInformation("🚀 API iniciada en {Environment}", app.Environment.EnvironmentName);

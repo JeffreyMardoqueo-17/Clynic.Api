@@ -27,6 +27,15 @@ namespace Clynic.Application.Rules
             return !existe;
         }
 
+        public async Task<bool> CorreoEsUnicoPorClinicaAsync(int idClinica, string correo, int? idExcluir = null)
+        {
+            if (idClinica <= 0 || string.IsNullOrWhiteSpace(correo))
+                return false;
+
+            var existe = await _usuarioRepository.ExisteCorreoPorClinicaAsync(idClinica, correo.Trim().ToLower(), idExcluir);
+            return !existe;
+        }
+
         public async Task<bool> ClinicaExisteAsync(int idClinica)
         {
             return await _clinicaRepository.ExisteAsync(idClinica);

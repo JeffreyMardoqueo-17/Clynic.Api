@@ -16,6 +16,10 @@ namespace Clynic.Application.Validators
                 .GreaterThan(0)
                 .WithMessage("El ID de la clínica debe ser mayor a cero.");
 
+            RuleFor(x => x.IdEspecialidad)
+                .GreaterThan(0)
+                .WithMessage("El ID de especialidad debe ser mayor a cero.");
+
             RuleFor(x => x.NombreServicio)
                 .NotEmpty()
                 .WithMessage("El nombre del servicio es obligatorio.")

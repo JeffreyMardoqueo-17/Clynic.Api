@@ -30,11 +30,18 @@ namespace Clynic.Application.Validators
                     .WithMessage("El correo no puede exceder 150 caracteres");
             });
 
-            When(x => x.Rol.HasValue, () =>
+            When(x => x.IdRol.HasValue, () =>
             {
-                RuleFor(x => x.Rol!.Value)
-                    .IsInEnum()
-                    .WithMessage("El rol especificado no es válido");
+                RuleFor(x => x.IdRol!.Value)
+                    .GreaterThan(0)
+                    .WithMessage("El ID del rol debe ser mayor a 0");
+            });
+
+            When(x => x.IdEspecialidad.HasValue, () =>
+            {
+                RuleFor(x => x.IdEspecialidad!.Value)
+                    .GreaterThan(0)
+                    .WithMessage("El ID de la especialidad debe ser mayor a 0");
             });
 
             When(x => x.IdSucursal.HasValue, () =>

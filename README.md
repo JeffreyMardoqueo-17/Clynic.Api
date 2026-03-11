@@ -47,6 +47,33 @@ Deberias ver:
 
 ---
 
+## 🐳 Publicar imagenes en Docker Hub (LandingV2)
+
+### 1. Configurar variables en `.env`
+```dotenv
+DOCKERHUB_USERNAME=tu_usuario_dockerhub
+IMAGE_TAG=LandingV2
+FRONTEND_URL=https://clynic-sys.vercel.app
+```
+
+### 2. Iniciar sesion en Docker Hub
+```bash
+docker login
+```
+
+### 3. Construir imagenes (API + SQL Server)
+```bash
+docker compose build
+```
+
+### 4. Subir imagenes
+```bash
+docker push <tu_usuario_dockerhub>/clynic-api:LandingV2
+docker push <tu_usuario_dockerhub>/clynic-sqlserver:LandingV2
+```
+
+---
+
 ## 🛑 Detener el Proyecto
 
 ```bash

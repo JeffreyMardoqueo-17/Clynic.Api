@@ -32,15 +32,26 @@ namespace Clynic.Application.Services
             if (usuario == null)
                 throw new ArgumentNullException(nameof(usuario));
 
-            var claims = new[]
+            var rolNombre = usuario.Rol?.Nombre ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(rolNombre))
+            {
+                throw new InvalidOperationException("El usuario no tiene un rol válido asignado.");
+            }
+
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                 new Claim(ClaimTypes.Name, usuario.NombreCompleto),
                 new Claim(ClaimTypes.Email, usuario.Correo),
-                new Claim(ClaimTypes.Role, usuario.Rol.ToString()),
+                new Claim(ClaimTypes.Role, rolNombre),
                 new Claim("IdClinica", usuario.IdClinica.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            if (usuario.IdSucursal.HasValue && usuario.IdSucursal.Value > 0)
+            {
+                claims.Add(new Claim("IdSucursal", usuario.IdSucursal.Value.ToString()));
+            }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

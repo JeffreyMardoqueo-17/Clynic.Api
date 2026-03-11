@@ -18,13 +18,21 @@ namespace Clynic.Infrastructure.Data
         public DbSet<Clinica> Clinicas { get; set; } = null!;
         public DbSet<Sucursal> Sucursales { get; set; } = null!;
         public DbSet<Usuario> Usuarios { get; set; } = null!;
+        public DbSet<Rol> Roles { get; set; } = null!;
+        public DbSet<Especialidad> Especialidades { get; set; } = null!;
+        public DbSet<RolEspecialidad> RolesEspecialidad { get; set; } = null!;
+        public DbSet<SucursalEspecialidad> SucursalesEspecialidad { get; set; } = null!;
         public DbSet<Paciente> Pacientes { get; set; } = null!;
+        public DbSet<HistorialClinico> HistorialesClinicos { get; set; } = null!;
         public DbSet<Servicio> Servicios { get; set; } = null!;
         public DbSet<HorarioSucursal> HorariosSucursal { get; set; } = null!;
         public DbSet<AsuetoSucursal> AsuetosSucursal { get; set; } = null!;
         public DbSet<Cita> Citas { get; set; } = null!;
+        public DbSet<CitaActividad> CitasActividad { get; set; } = null!;
         public DbSet<CitaServicio> CitasServicio { get; set; } = null!;
+        public DbSet<ConsultaMedica> ConsultasMedicas { get; set; } = null!;
         public DbSet<CodigoVerificacion> CodigosVerificacion { get; set; } = null!;
+        public DbSet<LandingPageConfig> LandingPageConfigs { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -33,14 +41,245 @@ namespace Clynic.Infrastructure.Data
             // ========== Configuración de entidades ==========
             ConfigureClinicas(modelBuilder);
             ConfigureSucursales(modelBuilder);
+            ConfigureRoles(modelBuilder);
+            ConfigureEspecialidades(modelBuilder);
+            ConfigureRolesEspecialidad(modelBuilder);
+            ConfigureSucursalesEspecialidad(modelBuilder);
             ConfigureUsuarios(modelBuilder);
             ConfigurePacientes(modelBuilder);
+            ConfigureHistorialesClinicos(modelBuilder);
             ConfigureServicios(modelBuilder);
             ConfigureHorariosSucursal(modelBuilder);
             ConfigureAsuetosSucursal(modelBuilder);
             ConfigureCitas(modelBuilder);
+            ConfigureCitasActividad(modelBuilder);
             ConfigureCitasServicio(modelBuilder);
+            ConfigureConsultasMedicas(modelBuilder);
             ConfigureCodigosVerificacion(modelBuilder);
+            ConfigureLandingPageConfigs(modelBuilder);
+        }
+
+        private void ConfigureLandingPageConfigs(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<LandingPageConfig>(entity =>
+            {
+                entity.ToTable("LandingPageConfig");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdClinica)
+                    .IsRequired();
+
+                entity.Property(e => e.NombreLanding)
+                    .HasMaxLength(160)
+                    .IsRequired();
+
+                entity.Property(e => e.HeroTitulo)
+                    .HasMaxLength(180)
+                    .IsRequired();
+
+                entity.Property(e => e.HeroSubtitulo)
+                    .HasMaxLength(220)
+                    .IsRequired();
+
+                entity.Property(e => e.DescripcionGeneral)
+                    .HasMaxLength(1200);
+
+                entity.Property(e => e.TelefonoContacto)
+                    .HasMaxLength(80);
+
+                entity.Property(e => e.CorreoContacto)
+                    .HasMaxLength(180);
+
+                entity.Property(e => e.DireccionContacto)
+                    .HasMaxLength(280);
+
+                entity.Property(e => e.WhatsappContacto)
+                    .HasMaxLength(80);
+
+                entity.Property(e => e.CtaPrincipalTexto)
+                    .HasMaxLength(80);
+
+                entity.Property(e => e.CtaPrincipalUrl)
+                    .HasMaxLength(350);
+
+                entity.Property(e => e.ServiciosJson)
+                    .HasColumnType("nvarchar(max)")
+                    .IsRequired();
+
+                entity.Property(e => e.MetaTitulo)
+                    .HasMaxLength(180);
+
+                entity.Property(e => e.MetaDescripcion)
+                    .HasMaxLength(300);
+
+                entity.Property(e => e.DominioBase)
+                    .HasMaxLength(160);
+
+                entity.Property(e => e.MostrarHorariosSucursal)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.Publicada)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.FechaActualizacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasIndex(e => e.IdClinica)
+                    .IsUnique();
+
+                entity.HasOne(e => e.Clinica)
+                    .WithMany(c => c.LandingPageConfigs)
+                    .HasForeignKey(e => e.IdClinica)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigureRoles(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Rol>(entity =>
+            {
+                entity.ToTable("Rol");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdClinica)
+                    .IsRequired(false);
+
+                entity.Property(e => e.IdSucursal)
+                    .IsRequired(false);
+
+                entity.Property(e => e.Nombre)
+                    .HasMaxLength(80)
+                    .IsRequired();
+
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(250);
+
+                entity.Property(e => e.Activo)
+                    .HasDefaultValue(true);
+
+                entity.HasIndex(e => new { e.IdClinica, e.IdSucursal, e.Nombre })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Clinica)
+                    .WithMany(c => c.Roles)
+                    .HasForeignKey(e => e.IdClinica)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Sucursal)
+                    .WithMany(s => s.Roles)
+                    .HasForeignKey(e => e.IdSucursal)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigureEspecialidades(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Especialidad>(entity =>
+            {
+                entity.ToTable("Especialidad");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdClinica)
+                    .IsRequired(false);
+
+                entity.Property(e => e.Nombre)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(400);
+
+                entity.Property(e => e.Activa)
+                    .HasDefaultValue(true);
+
+                entity.HasIndex(e => new { e.IdClinica, e.Nombre })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Clinica)
+                    .WithMany(c => c.Especialidades)
+                    .HasForeignKey(e => e.IdClinica)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigureRolesEspecialidad(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<RolEspecialidad>(entity =>
+            {
+                entity.ToTable("RolEspecialidad");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdRol)
+                    .IsRequired();
+
+                entity.Property(e => e.IdEspecialidad)
+                    .IsRequired();
+
+                entity.Property(e => e.Activa)
+                    .HasDefaultValue(true);
+
+                entity.HasIndex(e => new { e.IdRol, e.IdEspecialidad })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Rol)
+                    .WithMany(r => r.RolesEspecialidad)
+                    .HasForeignKey(e => e.IdRol)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Especialidad)
+                    .WithMany(es => es.RolesEspecialidad)
+                    .HasForeignKey(e => e.IdEspecialidad)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigureSucursalesEspecialidad(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<SucursalEspecialidad>(entity =>
+            {
+                entity.ToTable("SucursalEspecialidad");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdSucursal)
+                    .IsRequired();
+
+                entity.Property(e => e.IdEspecialidad)
+                    .IsRequired();
+
+                entity.Property(e => e.Activa)
+                    .HasDefaultValue(true);
+
+                entity.HasIndex(e => new { e.IdSucursal, e.IdEspecialidad })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Sucursal)
+                    .WithMany(s => s.Especialidades)
+                    .HasForeignKey(e => e.IdSucursal)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Especialidad)
+                    .WithMany(e => e.SucursalesEspecialidad)
+                    .HasForeignKey(e => e.IdEspecialidad)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
 
         private void ConfigureClinicas(ModelBuilder modelBuilder)
@@ -80,6 +319,14 @@ namespace Clynic.Infrastructure.Data
                     .WithOne(e => e.Clinica)
                     .HasForeignKey(e => e.IdClinica);
 
+                entity.HasMany(e => e.Roles)
+                    .WithOne(e => e.Clinica)
+                    .HasForeignKey(e => e.IdClinica);
+
+                entity.HasMany(e => e.Especialidades)
+                    .WithOne(e => e.Clinica)
+                    .HasForeignKey(e => e.IdClinica);
+
                 entity.HasMany(e => e.Servicios)
                     .WithOne(e => e.Clinica)
                     .HasForeignKey(e => e.IdClinica);
@@ -87,6 +334,16 @@ namespace Clynic.Infrastructure.Data
                 entity.HasMany(e => e.Citas)
                     .WithOne(e => e.Clinica)
                     .HasForeignKey(e => e.IdClinica);
+
+                entity.HasMany(e => e.Pacientes)
+                    .WithOne(e => e.Clinica)
+                    .HasForeignKey(e => e.IdClinica)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasMany(e => e.ConsultasMedicas)
+                    .WithOne(e => e.Clinica)
+                    .HasForeignKey(e => e.IdClinica)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
 
@@ -130,10 +387,25 @@ namespace Clynic.Infrastructure.Data
                     .WithOne(e => e.Sucursal)
                     .HasForeignKey(e => e.IdSucursal);
 
+                entity.HasMany(e => e.ConsultasMedicas)
+                    .WithOne(e => e.Sucursal)
+                    .HasForeignKey(e => e.IdSucursal)
+                    .OnDelete(DeleteBehavior.NoAction);
+
                 entity.HasMany(e => e.Usuarios)
                     .WithOne(e => e.Sucursal)
                     .HasForeignKey(e => e.IdSucursal)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasMany(e => e.Especialidades)
+                    .WithOne(e => e.Sucursal)
+                    .HasForeignKey(e => e.IdSucursal)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(e => e.Roles)
+                    .WithOne(e => e.Sucursal)
+                    .HasForeignKey(e => e.IdSucursal)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 
@@ -187,14 +459,17 @@ namespace Clynic.Infrastructure.Data
                 entity.Property(e => e.Correo)
                     .HasMaxLength(150);
 
+                entity.HasIndex(e => new { e.IdClinica, e.Correo })
+                    .IsUnique();
+
                 entity.Property(e => e.ClaveHash)
                     .HasMaxLength(300);
 
-                entity.Property(e => e.Rol)
-                    .HasConversion(
-                        v => v.ToString(),
-                        v => (UsuarioRol)Enum.Parse(typeof(UsuarioRol), v))
-                    .HasMaxLength(50);
+                entity.Property(e => e.IdRol)
+                    .IsRequired();
+
+                entity.Property(e => e.IdEspecialidad)
+                    .IsRequired(false);
 
                 entity.Property(e => e.Activo)
                     .HasDefaultValue(true);
@@ -208,6 +483,21 @@ namespace Clynic.Infrastructure.Data
                 entity.HasMany(e => e.CitasComoDoctor)
                     .WithOne(e => e.Doctor)
                     .HasForeignKey(e => e.IdDoctor);
+
+                entity.HasMany(e => e.ConsultasMedicasRealizadas)
+                    .WithOne(e => e.Doctor)
+                    .HasForeignKey(e => e.IdDoctor)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Rol)
+                    .WithMany(r => r.Usuarios)
+                    .HasForeignKey(e => e.IdRol)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Especialidad)
+                    .WithMany(es => es.Usuarios)
+                    .HasForeignKey(e => e.IdEspecialidad)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
 
@@ -221,18 +511,89 @@ namespace Clynic.Infrastructure.Data
                 entity.Property(e => e.Id)
                     .ValueGeneratedOnAdd();
 
-                entity.Property(e => e.NombreCompleto)
+                entity.Property(e => e.IdClinica)
+                    .IsRequired();
+
+                entity.Property(e => e.Nombres)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.Apellidos)
                     .HasMaxLength(150);
 
                 entity.Property(e => e.Telefono)
                     .HasMaxLength(50);
 
+                entity.Property(e => e.Correo)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.IdEspecialidad)
+                    .IsRequired(false);
+
+                entity.Property(e => e.FechaNacimiento)
+                    .IsRequired(false);
+
                 entity.Property(e => e.FechaRegistro)
                     .HasDefaultValueSql("GETDATE()");
+
+                entity.HasIndex(e => new { e.IdClinica, e.Correo });
+
+                entity.HasOne(e => e.HistorialClinico)
+                    .WithOne(e => e.Paciente)
+                    .HasForeignKey<HistorialClinico>(e => e.IdPaciente)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasMany(e => e.Citas)
                     .WithOne(e => e.Paciente)
                     .HasForeignKey(e => e.IdPaciente);
+
+                entity.HasMany(e => e.ConsultasMedicas)
+                    .WithOne(e => e.Paciente)
+                    .HasForeignKey(e => e.IdPaciente)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.Especialidad)
+                    .WithMany(es => es.Pacientes)
+                    .HasForeignKey(e => e.IdEspecialidad)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+        }
+
+        private void ConfigureHistorialesClinicos(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<HistorialClinico>(entity =>
+            {
+                entity.ToTable("HistorialClinico");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdPaciente)
+                    .IsRequired();
+
+                entity.Property(e => e.EnfermedadesPrevias)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.MedicamentosActuales)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.Alergias)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.AntecedentesFamiliares)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.Observaciones)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.FechaActualizacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasIndex(e => e.IdPaciente)
+                    .IsUnique();
             });
         }
 
@@ -264,6 +625,11 @@ namespace Clynic.Infrastructure.Data
                 entity.HasMany(e => e.CitaServicios)
                     .WithOne(e => e.Servicio)
                     .HasForeignKey(e => e.IdServicio);
+
+                entity.HasOne(e => e.Especialidad)
+                    .WithMany(e => e.Servicios)
+                    .HasForeignKey(e => e.IdEspecialidad)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
 
@@ -334,9 +700,25 @@ namespace Clynic.Infrastructure.Data
                 entity.Property(e => e.FechaCreacion)
                     .HasDefaultValueSql("GETDATE()");
 
+                entity.HasOne(e => e.ConsultaMedica)
+                    .WithOne(e => e.Cita)
+                    .HasForeignKey<ConsultaMedica>(e => e.IdCita)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasMany(e => e.CitaServicios)
                     .WithOne(e => e.Cita)
                     .HasForeignKey(e => e.IdCita);
+
+                entity.HasOne(e => e.Especialidad)
+                    .WithMany(e => e.Citas)
+                    .HasForeignKey(e => e.IdEspecialidad)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.IdClinica, e.IdSucursal, e.FechaHoraInicioPlan, e.Estado })
+                    .HasDatabaseName("IX_Cita_BusquedaSolape");
+
+                entity.HasIndex(e => new { e.IdClinica, e.IdSucursal, e.IdEspecialidad, e.FechaHoraInicioPlan })
+                    .HasDatabaseName("IX_Cita_Especialidad_Fecha");
             });
         }
 
@@ -360,6 +742,100 @@ namespace Clynic.Infrastructure.Data
 
                 entity.Property(e => e.Precio)
                     .HasColumnType("decimal(10,2)");
+            });
+        }
+
+        private void ConfigureCitasActividad(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CitaActividad>(entity =>
+            {
+                entity.ToTable("CitaActividad");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdCita)
+                    .IsRequired();
+
+                entity.Property(e => e.IdClinica)
+                    .IsRequired();
+
+                entity.Property(e => e.IdSucursal)
+                    .IsRequired();
+
+                entity.Property(e => e.RolUsuario)
+                    .HasMaxLength(80)
+                    .IsRequired();
+
+                entity.Property(e => e.Accion)
+                    .HasMaxLength(80)
+                    .IsRequired();
+
+                entity.Property(e => e.Detalle)
+                    .HasMaxLength(400)
+                    .IsRequired();
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(e => e.Cita)
+                    .WithMany()
+                    .HasForeignKey(e => e.IdCita)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.IdClinica, e.FechaCreacion })
+                    .HasDatabaseName("IX_CitaActividad_Clinica_Fecha");
+            });
+        }
+
+        private void ConfigureConsultasMedicas(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ConsultaMedica>(entity =>
+            {
+                entity.ToTable("ConsultaMedica");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdCita)
+                    .IsRequired();
+
+                entity.Property(e => e.IdClinica)
+                    .IsRequired();
+
+                entity.Property(e => e.IdSucursal)
+                    .IsRequired();
+
+                entity.Property(e => e.IdPaciente)
+                    .IsRequired();
+
+                entity.Property(e => e.Diagnostico)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.Tratamiento)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.Receta)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.ExamenesSolicitados)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.NotasMedicas)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(e => e.FechaConsulta)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasIndex(e => e.IdCita)
+                    .IsUnique();
+
+                entity.HasIndex(e => new { e.IdClinica, e.IdPaciente, e.FechaConsulta });
             });
         }
 

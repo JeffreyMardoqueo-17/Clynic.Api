@@ -11,5 +11,6 @@ namespace Clynic.Application.Interfaces.Repositories
         Task<bool> EliminarAsync(int id);
         Task<bool> ExisteNombreAsync(string nombreServicio, int idClinica, int? idExcluir = null);
         Task<bool> ExisteAsync(int id);
+        Task<IReadOnlyCollection<Servicio>> ObtenerPorIdsClinicaAsync(int idClinica, IEnumerable<int> idsServicios);
     }
 }

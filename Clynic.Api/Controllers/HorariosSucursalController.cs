@@ -1,4 +1,4 @@
-using Clynic.Application.DTOs.HorariosSucursal;
+﻿using Clynic.Application.DTOs.HorariosSucursal;
 using Clynic.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -227,3 +227,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

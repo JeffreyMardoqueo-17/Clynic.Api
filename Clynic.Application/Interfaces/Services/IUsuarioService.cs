@@ -1,5 +1,4 @@
 using Clynic.Application.DTOs.Usuarios;
-using Clynic.Domain.Models.Enums;
 
 namespace Clynic.Application.Interfaces.Services
 {
@@ -16,6 +15,7 @@ namespace Clynic.Application.Interfaces.Services
         Task<UsuarioResponseDto> CrearPorAdminAsync(CreateUsuarioAdminDto createDto);
         Task<UsuarioResponseDto?> ActualizarAsync(int id, UpdateUsuarioDto updateDto);
         Task<bool> EliminarAsync(int id);
+        Task<bool> ReenviarCredencialesTemporalesAsync(int id);
         Task<bool> CambiarClaveAsync(int id, ChangePasswordDto changePasswordDto);
         Task<bool> ActualizarClaveAsync(int id, string nuevaClaveHash);
     }
