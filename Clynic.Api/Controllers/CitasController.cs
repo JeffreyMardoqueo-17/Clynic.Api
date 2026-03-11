@@ -1,4 +1,4 @@
-using Clynic.Application.DTOs.Citas;
+﻿using Clynic.Application.DTOs.Citas;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Domain.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +29,7 @@ namespace Clynic.Api.Controllers
         {
             if (idClinica <= 0)
             {
-                return BadRequest(new { mensaje = "El ID de clínica debe ser mayor a cero." });
+                return BadRequest(new { mensaje = "El ID de clÃ­nica debe ser mayor a cero." });
             }
 
             var catalogo = await _citaService.ObtenerCatalogoPublicoAsync(idClinica);
@@ -52,7 +52,7 @@ namespace Clynic.Api.Controllers
         {
             if (idClinica <= 0)
             {
-                return BadRequest(new { mensaje = "El ID de clínica debe ser mayor a cero." });
+                return BadRequest(new { mensaje = "El ID de clÃ­nica debe ser mayor a cero." });
             }
 
             if (idSucursal <= 0)
@@ -126,12 +126,16 @@ namespace Clynic.Api.Controllers
                 }
             }
 
-            var creada = await _citaService.CrearInternaAsync(dto);
+            var idUsuario = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            int.TryParse(idUsuario, out var idUsuarioEjecutor);
+            var rolEjecutor = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+
+            var creada = await _citaService.CrearInternaAsync(dto, idUsuarioEjecutor > 0 ? idUsuarioEjecutor : null, rolEjecutor);
             return CreatedAtAction(nameof(ObtenerPorId), new { id = creada.Id }, creada);
         }
 
         [HttpGet("clinica/{idClinica}")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<CitaResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -162,8 +166,34 @@ namespace Clynic.Api.Controllers
             return Ok(citas);
         }
 
+        [HttpGet("clinica/{idClinica}/actividad")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
+        [ProducesResponseType(typeof(IReadOnlyCollection<CitaActividadResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IReadOnlyCollection<CitaActividadResponseDto>>> ObtenerActividadPorClinica(
+            int idClinica,
+            [FromQuery] DateTime? fechaDesde = null,
+            [FromQuery] DateTime? fechaHasta = null,
+            [FromQuery] int maxResultados = 100)
+        {
+            if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != idClinica)
+            {
+                return Forbid();
+            }
+
+            if (!User.IsInRole("Admin") && !TryGetIdSucursalToken(out _))
+            {
+                return Forbid();
+            }
+
+            var actividad = await _citaService.ObtenerActividadPorClinicaAsync(idClinica, fechaDesde, fechaHasta, maxResultados);
+            return Ok(actividad);
+        }
+
         [HttpGet("doctor/cola")]
-        [Authorize(Roles = "Doctor,Nutricionista,Fisioterapeuta,Admin")]
+        [Authorize(Roles = "Doctor,Admin")]
         [ProducesResponseType(typeof(IEnumerable<CitaResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -187,26 +217,12 @@ namespace Clynic.Api.Controllers
                 idSucursal = idSucursalToken;
             }
 
-            var hoy = DateTime.Today;
-            var manana = hoy.AddDays(1).AddTicks(-1);
-
-            var citas = await _citaService.ObtenerPorClinicaAsync(
-                idClinicaToken,
-                hoy,
-                manana,
-                idSucursal,
-                null);
-
-            var colaDoctor = citas
-                .Where(c => c.IdDoctor == idDoctor && (c.Estado == EstadoCita.Presente || c.Estado == EstadoCita.EnConsulta))
-                .OrderBy(c => c.FechaHoraInicioPlan)
-                .ToList();
-
+            var colaDoctor = await _citaService.ObtenerColaDoctorAsync(idClinicaToken, idDoctor, idSucursal);
             return Ok(colaDoctor);
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(CitaResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -217,7 +233,7 @@ namespace Clynic.Api.Controllers
             var cita = await _citaService.ObtenerPorIdAsync(id);
             if (cita == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {id}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
@@ -237,7 +253,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpPut("{id}/doctor")]
-        [Authorize(Roles = "Admin,Recepcionista")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(CitaResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -254,7 +270,7 @@ namespace Clynic.Api.Controllers
             var cita = await _citaService.ObtenerPorIdAsync(id);
             if (cita == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {id}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
@@ -273,14 +289,14 @@ namespace Clynic.Api.Controllers
             var actualizada = await _citaService.AsignarDoctorAsync(id, dto);
             if (actualizada == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {id}" });
             }
 
             return Ok(actualizada);
         }
 
         [HttpPatch("{id}/estado")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(CitaResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -293,6 +309,58 @@ namespace Clynic.Api.Controllers
             if (dto == null)
             {
                 return BadRequest(new { mensaje = "Los datos del cambio de estado son requeridos." });
+            }
+
+            var cita = await _citaService.ObtenerPorIdAsync(id);
+            if (cita == null)
+            {
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {id}" });
+            }
+
+            if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
+            {
+                return Forbid();
+            }
+
+            if (!User.IsInRole("Admin"))
+            {
+                if (!TryGetIdSucursalToken(out var idSucursalToken) || cita.IdSucursal != idSucursalToken)
+                {
+                    return Forbid();
+                }
+            }
+
+            var idUsuario = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(idUsuario, out var idUsuarioEjecutor) || idUsuarioEjecutor <= 0)
+            {
+                return Unauthorized(new { mensaje = "No se pudo identificar el usuario autenticado." });
+            }
+
+            var rolEjecutor = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+
+            var actualizada = await _citaService.CambiarEstadoAsync(id, dto, rolEjecutor, idUsuarioEjecutor);
+            if (actualizada == null)
+            {
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {id}" });
+            }
+
+            return Ok(actualizada);
+        }
+
+        [HttpPatch("{id}/reprogramar")]
+        [Authorize(Roles = "Admin,Recepcionista")]
+        [ProducesResponseType(typeof(CitaResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<CitaResponseDto>> Reprogramar(int id, [FromBody] ReprogramarCitaDto dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest(new { mensaje = "Los datos de reprogramación son requeridos." });
             }
 
             var cita = await _citaService.ObtenerPorIdAsync(id);
@@ -321,18 +389,17 @@ namespace Clynic.Api.Controllers
             }
 
             var rolEjecutor = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
-
-            var actualizada = await _citaService.CambiarEstadoAsync(id, dto, rolEjecutor, idUsuarioEjecutor);
-            if (actualizada == null)
+            var reprogramada = await _citaService.ReprogramarAsync(id, dto, rolEjecutor, idUsuarioEjecutor);
+            if (reprogramada == null)
             {
                 return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
             }
 
-            return Ok(actualizada);
+            return Ok(reprogramada);
         }
 
         [HttpPost("{id}/consulta")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta")]
+        [Authorize(Roles = "Admin,Doctor")]
         [ProducesResponseType(typeof(ConsultaMedicaResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -349,7 +416,7 @@ namespace Clynic.Api.Controllers
             var cita = await _citaService.ObtenerPorIdAsync(id);
             if (cita == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {id}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
@@ -388,3 +455,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

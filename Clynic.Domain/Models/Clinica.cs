@@ -29,5 +29,7 @@ namespace Clynic.Domain.Models
             = new List<Cita>();
         public ICollection<ConsultaMedica> ConsultasMedicas { get; set; }
             = new List<ConsultaMedica>();
+        public ICollection<LandingPageConfig> LandingPageConfigs { get; set; }
+            = new List<LandingPageConfig>();
     }
 }

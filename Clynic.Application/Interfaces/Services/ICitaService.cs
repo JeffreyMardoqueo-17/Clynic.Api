@@ -14,7 +14,7 @@ namespace Clynic.Application.Interfaces.Services
             IEnumerable<int> idsServicios,
             int intervaloMin = 30);
         Task<CitaResponseDto> CrearPublicaAsync(CreateCitaPublicaDto dto);
-        Task<CitaResponseDto> CrearInternaAsync(CreateCitaInternaDto dto);
+        Task<CitaResponseDto> CrearInternaAsync(CreateCitaInternaDto dto, int? idUsuarioEjecutor = null, string? rolEjecutor = null);
         Task<CitaResponseDto?> ObtenerPorIdAsync(int idCita);
         Task<IEnumerable<CitaResponseDto>> ObtenerPorClinicaAsync(
             int idClinica,
@@ -22,8 +22,15 @@ namespace Clynic.Application.Interfaces.Services
             DateTime? fechaHasta = null,
             int? idSucursal = null,
             EstadoCita? estado = null);
+        Task<IEnumerable<CitaResponseDto>> ObtenerColaDoctorAsync(int idClinica, int idDoctor, int? idSucursal = null);
         Task<CitaResponseDto?> AsignarDoctorAsync(int idCita, AsignarDoctorCitaDto dto);
         Task<CitaResponseDto?> CambiarEstadoAsync(int idCita, CambiarEstadoCitaDto dto, string rolEjecutor, int idUsuarioEjecutor);
+        Task<CitaResponseDto?> ReprogramarAsync(int idCita, ReprogramarCitaDto dto, string rolEjecutor, int idUsuarioEjecutor);
+        Task<IReadOnlyCollection<CitaActividadResponseDto>> ObtenerActividadPorClinicaAsync(
+            int idClinica,
+            DateTime? fechaDesde = null,
+            DateTime? fechaHasta = null,
+            int maxResultados = 100);
         Task<ConsultaMedicaResponseDto> RegistrarConsultaAsync(int idCita, int idDoctorEjecutor, RegistrarConsultaMedicaDto dto);
     }
 }

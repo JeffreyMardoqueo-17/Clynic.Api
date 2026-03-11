@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Clynic.Application.DTOs.Clinicas;
 using Clynic.Application.Interfaces.Services;
@@ -6,7 +6,7 @@ using Clynic.Application.Interfaces.Services;
 namespace Clynic.Api.Controllers
 {
     /// <summary>
-    /// Controller para gestionar las Clínicas
+    /// Controller para gestionar las ClÃ­nicas
     /// </summary>
     [ApiController]
     [Route("/[controller]")]
@@ -22,10 +22,10 @@ namespace Clynic.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene todas las clínicas activas
+        /// Obtiene todas las clÃ­nicas activas
         /// </summary>
-        /// <returns>Lista de clínicas</returns>
-        /// <response code="200">Retorna la lista de clínicas</response>
+        /// <returns>Lista de clÃ­nicas</returns>
+        /// <response code="200">Retorna la lista de clÃ­nicas</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet]
         [Authorize(Roles = "Admin")]
@@ -38,16 +38,30 @@ namespace Clynic.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene una clínica por su ID
+        /// Obtiene el listado publico de clinicas activas.
         /// </summary>
-        /// <param name="id">ID de la clínica</param>
-        /// <returns>La clínica solicitada</returns>
-        /// <response code="200">Retorna la clínica encontrada</response>
-        /// <response code="404">No se encontró la clínica</response>
-        /// <response code="400">ID inválido</response>
+        /// <returns>Lista de clinicas activas para agendado publico</returns>
+        [HttpGet("publicas")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(IEnumerable<ClinicaResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<ClinicaResponseDto>>> ObtenerPublicas()
+        {
+            var clinicas = await _clinicaService.ObtenerTodasAsync();
+            return Ok(clinicas);
+        }
+
+        /// <summary>
+        /// Obtiene una clÃ­nica por su ID
+        /// </summary>
+        /// <param name="id">ID de la clÃ­nica</param>
+        /// <returns>La clÃ­nica solicitada</returns>
+        /// <response code="200">Retorna la clÃ­nica encontrada</response>
+        /// <response code="404">No se encontrÃ³ la clÃ­nica</response>
+        /// <response code="400">ID invÃ¡lido</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(ClinicaResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -58,10 +72,11 @@ namespace Clynic.Api.Controllers
             var clinica = await _clinicaService.ObtenerPorIdAsync(id);
 
             if (clinica == null)
-                return NotFound(new { mensaje = $"No se encontró la clínica con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la clÃ­nica con ID {id}" });
 
             return Ok(clinica);
         }
 
     }
 }
+

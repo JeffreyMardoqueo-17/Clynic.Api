@@ -57,6 +57,12 @@ namespace Clynic.Application.Interfaces.Repositories
             DateTime fechaHoraInicio,
             DateTime fechaHoraFin,
             int? idCitaExcluir = null);
+        Task<bool> ExisteTraslapePacienteAsync(
+            int idClinica,
+            int idPaciente,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            int? idCitaExcluir = null);
         Task<IReadOnlyList<(DateTime Fecha, int Total)>> ObtenerTotalesPorDiaAsync(
             int idClinica,
             DateTime fechaDesdeInclusive,

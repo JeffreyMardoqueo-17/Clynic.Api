@@ -20,6 +20,14 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'Especialidad', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'atencion al cliente')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Atencion al Cliente', 'Especialidad por defecto para recepcionistas', 1);
+END
+GO
+
 DECLARE @IdRolAdmin INT;
 DECLARE @IdEspecialidadAdmin INT;
 
@@ -52,5 +60,5 @@ BEGIN
 END
 GO
 
-PRINT 'Datos semilla listos: Rol Admin + Especialidad Encargado Global + RolEspecialidad.';
+PRINT 'Datos semilla listos: Rol Admin + Especialidades base (Encargado Global y Atencion al Cliente) + RolEspecialidad.';
 GO

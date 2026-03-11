@@ -117,9 +117,7 @@ namespace Clynic.Infrastructure.Repositories
                     u.Rol != null &&
                     u.Rol.Activo &&
                     u.Rol.Nombre != null &&
-                    (u.Rol.Nombre.ToLower() == "doctor" ||
-                     u.Rol.Nombre.ToLower() == "nutricionista" ||
-                     u.Rol.Nombre.ToLower() == "fisioterapeuta"));
+                    u.Rol.Nombre.ToLower() == "doctor");
         }
 
         public async Task<Usuario?> ObtenerPorIdAsync(int id)

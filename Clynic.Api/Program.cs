@@ -64,8 +64,10 @@ builder.Services.AddScoped<IRolEspecialidadRepository, RolEspecialidadRepository
 builder.Services.AddScoped<IEspecialidadRepository, EspecialidadRepository>();
 builder.Services.AddScoped<ISucursalEspecialidadRepository, SucursalEspecialidadRepository>();
 builder.Services.AddScoped<ICodigoVerificacionRepository, CodigoVerificacionRepository>();
+builder.Services.AddScoped<ILandingPageConfigRepository, LandingPageConfigRepository>();
 builder.Services.AddScoped<IPacienteRepository, PacienteRepository>();
 builder.Services.AddScoped<ICitaRepository, CitaRepository>();
+builder.Services.AddScoped<ICitaActividadRepository, CitaActividadRepository>();
 builder.Services.AddScoped<ICitaServicioRepository, CitaServicioRepository>();
 builder.Services.AddScoped<IHistorialClinicoRepository, HistorialClinicoRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -88,6 +90,7 @@ builder.Services.AddScoped<ICitaServicioService, CitaServicioService>();
 builder.Services.AddScoped<IHistorialClinicoService, HistorialClinicoService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IDoctorNotificationService, DoctorNotificationService>();
+builder.Services.AddScoped<ILandingPageConfigService, LandingPageConfigService>();
 
 // DI - Business Rules
 builder.Services.AddScoped<ClinicaRules>();
@@ -118,6 +121,7 @@ builder.Services.AddScoped<IValidator<CreateCitaPublicaDto>, CreateCitaPublicaDt
 builder.Services.AddScoped<IValidator<CreateCitaInternaDto>, CreateCitaInternaDtoValidator>();
 builder.Services.AddScoped<IValidator<RegistrarConsultaMedicaDto>, RegistrarConsultaMedicaDtoValidator>();
 builder.Services.AddScoped<IValidator<CreateCitaServicioDto>, CreateCitaServicioDtoValidator>();
+builder.Services.AddScoped<IValidator<CreatePacienteDto>, CreatePacienteDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdatePacienteDto>, UpdatePacienteDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateHistorialClinicoDto>, UpdateHistorialClinicoDtoValidator>();
 builder.Services.AddScoped<IValidator<UpsertHistorialClinicoDto>, UpsertHistorialClinicoDtoValidator>();
@@ -172,7 +176,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("AdminOrDoctor", policy => policy.RequireRole("Admin", "Doctor", "Nutricionista", "Fisioterapeuta"));
+    options.AddPolicy("AdminOrDoctor", policy => policy.RequireRole("Admin", "Doctor"));
 });
 
 // Controllers y API
@@ -263,9 +267,39 @@ BEGIN
     );
 END
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Nombre' AND object_id = OBJECT_ID('Rol'))
+IF OBJECT_ID(N'Rol', N'U') IS NOT NULL
 BEGIN
-    CREATE UNIQUE INDEX UX_Rol_Nombre ON Rol(Nombre);
+    IF EXISTS (
+        SELECT 1
+        FROM sys.key_constraints
+        WHERE [name] = 'UX_Rol_Nombre'
+          AND [type] = 'UQ'
+          AND parent_object_id = OBJECT_ID('Rol')
+    )
+    BEGIN
+        ALTER TABLE Rol DROP CONSTRAINT UX_Rol_Nombre;
+    END
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Nombre' AND object_id = OBJECT_ID('Rol'))
+    BEGIN
+        DROP INDEX UX_Rol_Nombre ON Rol;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = 'UX_Rol_Clinica_Sucursal_Nombre'
+          AND object_id = OBJECT_ID('Rol')
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM Rol
+        GROUP BY IdClinica, IdSucursal, Nombre
+        HAVING COUNT(*) > 1
+    )
+    BEGIN
+        CREATE UNIQUE INDEX UX_Rol_Clinica_Sucursal_Nombre ON Rol(IdClinica, IdSucursal, Nombre);
+    END
 END
 
 IF OBJECT_ID(N'Especialidad', N'U') IS NULL
@@ -279,9 +313,49 @@ BEGIN
     );
 END
 
+IF OBJECT_ID(N'Especialidad', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('Especialidad', 'IdClinica') IS NULL
+    BEGIN
+        ALTER TABLE Especialidad ADD IdClinica INT NULL;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_Especialidad_Clinica'
+          AND parent_object_id = OBJECT_ID('Especialidad')
+    )
+    BEGIN
+        ALTER TABLE Especialidad
+        ADD CONSTRAINT FK_Especialidad_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id);
+    END
+END
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
 BEGIN
     CREATE UNIQUE INDEX UX_Especialidad_Nombre ON Especialidad(Nombre);
+END
+
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+BEGIN
+    DROP INDEX UX_Especialidad_Nombre ON Especialidad;
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'UX_Especialidad_Clinica_Nombre'
+      AND object_id = OBJECT_ID('Especialidad')
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM Especialidad
+    GROUP BY IdClinica, Nombre
+    HAVING COUNT(*) > 1
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Especialidad_Clinica_Nombre ON Especialidad(IdClinica, Nombre);
 END
 
 IF OBJECT_ID(N'RolEspecialidad', N'U') IS NULL
@@ -320,6 +394,12 @@ IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'encargado globa
 BEGIN
     INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
     VALUES (NULL, 'Encargado Global', 'Especialidad global para administradores', 1);
+END
+
+IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'atencion al cliente')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Atencion al Cliente', 'Especialidad global por defecto para recepción', 1);
 END
 
 DECLARE @AdminRolId INT;

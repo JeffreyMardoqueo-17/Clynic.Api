@@ -1,4 +1,4 @@
-using Clynic.Application.DTOs.Pacientes;
+﻿using Clynic.Application.DTOs.Pacientes;
 using Clynic.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+    [Authorize(Roles = "Admin,Doctor,Recepcionista")]
     public class PacientesController : ControllerBase
     {
         private readonly IPacienteService _pacienteService;
@@ -16,6 +16,30 @@ namespace Clynic.Api.Controllers
         public PacientesController(IPacienteService pacienteService)
         {
             _pacienteService = pacienteService ?? throw new ArgumentNullException(nameof(pacienteService));
+        }
+
+        [HttpPost("clinica/{idClinica}")]
+        [Authorize(Roles = "Admin,Recepcionista")]
+        [ProducesResponseType(typeof(PacienteResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<PacienteResponseDto>> Crear(int idClinica, [FromBody] CreatePacienteDto dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest(new { mensaje = "Los datos del paciente son requeridos." });
+            }
+
+            var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
+            if (!int.TryParse(idClinicaClaim, out var idClinicaToken) || idClinicaToken != idClinica)
+            {
+                return Forbid();
+            }
+
+            var creado = await _pacienteService.CrearAsync(idClinica, dto);
+            return CreatedAtAction(nameof(ObtenerPorId), new { id = creado.Id }, creado);
         }
 
         [HttpGet("clinica/{idClinica}")]
@@ -46,7 +70,7 @@ namespace Clynic.Api.Controllers
             var paciente = await _pacienteService.ObtenerPorIdAsync(id);
             if (paciente == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el paciente con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el paciente con ID {id}" });
             }
 
             var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
@@ -75,7 +99,7 @@ namespace Clynic.Api.Controllers
             var pacienteExistente = await _pacienteService.ObtenerPorIdAsync(id);
             if (pacienteExistente == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el paciente con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el paciente con ID {id}" });
             }
 
             var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
@@ -87,14 +111,14 @@ namespace Clynic.Api.Controllers
             var actualizado = await _pacienteService.ActualizarAsync(id, dto);
             if (actualizado == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el paciente con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el paciente con ID {id}" });
             }
 
             return Ok(actualizado);
         }
 
         [HttpPut("{id}/historial")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta")]
+        [Authorize(Roles = "Admin,Doctor")]
         [ProducesResponseType(typeof(HistorialClinicoResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -111,7 +135,7 @@ namespace Clynic.Api.Controllers
             var pacienteExistente = await _pacienteService.ObtenerPorIdAsync(id);
             if (pacienteExistente == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el paciente con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el paciente con ID {id}" });
             }
 
             var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
@@ -125,3 +149,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

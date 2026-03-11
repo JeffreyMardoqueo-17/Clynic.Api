@@ -15,9 +15,9 @@ BEGIN
         Activo BIT NOT NULL DEFAULT 1
     );
 
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Nombre' AND object_id = OBJECT_ID('Rol'))
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Clinica_Sucursal_Nombre' AND object_id = OBJECT_ID('Rol'))
     BEGIN
-        CREATE UNIQUE INDEX UX_Rol_Nombre ON Rol(Nombre);
+        CREATE UNIQUE INDEX UX_Rol_Clinica_Sucursal_Nombre ON Rol(IdClinica, IdSucursal, Nombre);
     END
 END
 GO
@@ -32,9 +32,80 @@ BEGIN
         Activa BIT NOT NULL DEFAULT 1
     );
 
-    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Clinica_Nombre' AND object_id = OBJECT_ID('Especialidad'))
     BEGIN
-        CREATE UNIQUE INDEX UX_Especialidad_Nombre ON Especialidad(Nombre);
+        CREATE UNIQUE INDEX UX_Especialidad_Clinica_Nombre ON Especialidad(IdClinica, Nombre);
+    END
+END
+GO
+
+IF OBJECT_ID(N'Rol', N'U') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM sys.key_constraints
+        WHERE [name] = 'UX_Rol_Nombre'
+          AND [type] = 'UQ'
+          AND parent_object_id = OBJECT_ID('Rol')
+    )
+    BEGIN
+        ALTER TABLE Rol DROP CONSTRAINT UX_Rol_Nombre;
+    END
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Nombre' AND object_id = OBJECT_ID('Rol'))
+    BEGIN
+        DROP INDEX UX_Rol_Nombre ON Rol;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Rol_Clinica_Sucursal_Nombre' AND object_id = OBJECT_ID('Rol'))
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM Rol
+            GROUP BY IdClinica, IdSucursal, Nombre
+            HAVING COUNT(*) > 1
+        )
+        BEGIN
+            CREATE UNIQUE INDEX UX_Rol_Clinica_Sucursal_Nombre ON Rol(IdClinica, IdSucursal, Nombre);
+        END
+    END
+END
+GO
+
+IF OBJECT_ID(N'Especialidad', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('Especialidad', 'IdClinica') IS NULL
+    BEGIN
+        ALTER TABLE Especialidad ADD IdClinica INT NULL;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM sys.key_constraints
+        WHERE [name] = 'UX_Especialidad_Nombre'
+          AND [type] = 'UQ'
+          AND parent_object_id = OBJECT_ID('Especialidad')
+    )
+    BEGIN
+        ALTER TABLE Especialidad DROP CONSTRAINT UX_Especialidad_Nombre;
+    END
+
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+    BEGIN
+        DROP INDEX UX_Especialidad_Nombre ON Especialidad;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_Especialidad_Clinica_Nombre' AND object_id = OBJECT_ID('Especialidad'))
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM Especialidad
+            GROUP BY IdClinica, Nombre
+            HAVING COUNT(*) > 1
+        )
+        BEGIN
+            CREATE UNIQUE INDEX UX_Especialidad_Clinica_Nombre ON Especialidad(IdClinica, Nombre);
+        END
     END
 END
 GO
@@ -96,24 +167,24 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM Rol WHERE LOWER(Nombre) = 'nutricionista')
-BEGIN
-    INSERT INTO Rol (IdClinica, IdSucursal, Nombre, Descripcion, Activo)
-    VALUES (NULL, NULL, 'Nutricionista', 'Rol profesional nutrición', 1);
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM Rol WHERE LOWER(Nombre) = 'fisioterapeuta')
-BEGIN
-    INSERT INTO Rol (IdClinica, IdSucursal, Nombre, Descripcion, Activo)
-    VALUES (NULL, NULL, 'Fisioterapeuta', 'Rol profesional fisioterapia', 1);
-END
-GO
-
 IF NOT EXISTS (SELECT 1 FROM Rol WHERE LOWER(Nombre) = 'recepcionista')
 BEGIN
     INSERT INTO Rol (IdClinica, IdSucursal, Nombre, Descripcion, Activo)
     VALUES (NULL, NULL, 'Recepcionista', 'Rol operativo recepción', 1);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'encargado global')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Encargado Global', 'Especialidad global para administradores', 1);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM Especialidad WHERE LOWER(Nombre) = 'atencion al cliente')
+BEGIN
+    INSERT INTO Especialidad (IdClinica, Nombre, Descripcion, Activa)
+    VALUES (NULL, 'Atencion al Cliente', 'Especialidad por defecto para recepcionistas', 1);
 END
 GO
 

@@ -8,6 +8,10 @@ namespace Clynic.Application.DTOs.Servicios
         [Range(1, int.MaxValue, ErrorMessage = "El ID de la clínica debe ser mayor a 0")]
         public int IdClinica { get; set; }
 
+        [Required(ErrorMessage = "El ID de especialidad es obligatorio")]
+        [Range(1, int.MaxValue, ErrorMessage = "El ID de especialidad debe ser mayor a 0")]
+        public int IdEspecialidad { get; set; }
+
         [Required(ErrorMessage = "El nombre del servicio es obligatorio")]
         [StringLength(150, MinimumLength = 3, ErrorMessage = "El nombre debe tener entre 3 y 150 caracteres")]
         public string NombreServicio { get; set; } = string.Empty;

@@ -60,13 +60,21 @@ if [ "${DB_EXISTS}" = "1" ]; then
 
     wait_for_database_online "${DB_NAME}"
 
-    echo "  [1/2] Ejecutando: patch-usuario-sucursal.sql"
+    echo "  [1/4] Ejecutando: patch-usuario-sucursal.sql"
     sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-usuario-sucursal.sql"
     echo "    ✅ Patch sucursal aplicado"
 
-    echo "  [2/2] Ejecutando: patch-usuario-rol-especialidad.sql"
+    echo "  [2/4] Ejecutando: patch-usuario-rol-especialidad.sql"
     sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-usuario-rol-especialidad.sql"
     echo "    ✅ Patch rol/especialidad aplicado"
+
+    echo "  [3/4] Ejecutando: patch-cita-especialidad.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-cita-especialidad.sql"
+    echo "    ✅ Patch cita/especialidad aplicado"
+
+    echo "  [4/4] Ejecutando: patch-landing-page-config.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-landing-page-config.sql"
+    echo "    ✅ Patch landing config aplicado"
 else
     # Ejecutar scripts SQL en orden específico
     echo "📄 Ejecutando scripts SQL..."
@@ -92,6 +100,8 @@ else
     echo "  [4/4] Ejecutando patches de compatibilidad"
     sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-usuario-sucursal.sql"
     sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-usuario-rol-especialidad.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-cita-especialidad.sql"
+    sqlcmd -b -S localhost -U sa -P "${DB_PASSWORD}" -i "/usr/scripts/patch-landing-page-config.sql"
     echo "    ✅ Patches aplicados"
 
     echo "✅ Inicialización completada"

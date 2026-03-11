@@ -245,6 +245,29 @@ namespace Clynic.Infrastructure.Repositories
             return await query.CountAsync();
         }
 
+        public async Task<bool> ExisteTraslapePacienteAsync(
+            int idClinica,
+            int idPaciente,
+            DateTime fechaHoraInicio,
+            DateTime fechaHoraFin,
+            int? idCitaExcluir = null)
+        {
+            var query = _context.Citas.Where(c =>
+                c.IdClinica == idClinica
+                && c.IdPaciente == idPaciente
+                && c.Estado != EstadoCita.Cancelada
+                && c.Estado != EstadoCita.Completada
+                && c.FechaHoraInicioPlan < fechaHoraFin
+                && c.FechaHoraFinPlan > fechaHoraInicio);
+
+            if (idCitaExcluir.HasValue)
+            {
+                query = query.Where(c => c.Id != idCitaExcluir.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+
         public async Task<IReadOnlyList<(DateTime Fecha, int Total)>> ObtenerTotalesPorDiaAsync(
             int idClinica,
             DateTime fechaDesdeInclusive,

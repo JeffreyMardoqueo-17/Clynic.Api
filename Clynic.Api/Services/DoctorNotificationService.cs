@@ -31,5 +31,30 @@ namespace Clynic.Api.Services
                     fecha = DateTime.UtcNow
                 });
         }
+
+        public async Task NotifyAppointmentUpdatedAsync(int idClinica, int idSucursal, int idCita, string evento, string mensaje)
+        {
+            if (idClinica <= 0 || idCita <= 0)
+            {
+                return;
+            }
+
+            var payload = new
+            {
+                idClinica,
+                idSucursal,
+                idCita,
+                evento,
+                mensaje,
+                fecha = DateTime.UtcNow
+            };
+
+            await _hubContext.Clients.Group($"clinic:{idClinica}").SendAsync("appointment-updated", payload);
+
+            if (idSucursal > 0)
+            {
+                await _hubContext.Clients.Group($"sucursal:{idSucursal}").SendAsync("appointment-updated", payload);
+            }
+        }
     }
 }

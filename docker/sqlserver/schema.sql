@@ -39,7 +39,7 @@ CREATE TABLE Rol (
     Nombre NVARCHAR(80) NOT NULL,
     Descripcion NVARCHAR(250) NULL,
     Activo BIT NOT NULL DEFAULT 1,
-   CONSTRAINT UX_Rol_Nombre UNIQUE (Nombre),
+   CONSTRAINT UX_Rol_Clinica_Sucursal_Nombre UNIQUE (IdClinica, IdSucursal, Nombre),
    CONSTRAINT FK_Rol_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id),
    CONSTRAINT FK_Rol_Sucursal FOREIGN KEY (IdSucursal) REFERENCES Sucursal(Id)
 );
@@ -50,10 +50,12 @@ GO
 ========================================= */
 CREATE TABLE Especialidad (
     Id INT IDENTITY(1,1) PRIMARY KEY,
+   IdClinica INT NULL,
     Nombre NVARCHAR(100) NOT NULL,
     Descripcion NVARCHAR(400) NULL,
     Activa BIT NOT NULL DEFAULT 1,
-   CONSTRAINT UX_Especialidad_Nombre UNIQUE (Nombre)
+   CONSTRAINT UX_Especialidad_Clinica_Nombre UNIQUE (IdClinica, Nombre),
+   CONSTRAINT FK_Especialidad_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id)
 );
 GO
 
@@ -150,12 +152,14 @@ GO
 CREATE TABLE Servicio (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     IdClinica INT NOT NULL,
+   IdEspecialidad INT NOT NULL,
     NombreServicio NVARCHAR(150) NOT NULL,
     DuracionMin INT NOT NULL,
     PrecioBase DECIMAL(10,2) NOT NULL,
     Activo BIT NOT NULL DEFAULT 1,
 
-    CONSTRAINT FK_Servicio_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id)
+   CONSTRAINT FK_Servicio_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id),
+   CONSTRAINT FK_Servicio_Especialidad FOREIGN KEY (IdEspecialidad) REFERENCES Especialidad(Id)
 );
 GO
 
@@ -288,6 +292,36 @@ CREATE TABLE AsuetoSucursal (
     FechaCreacion DATETIME NOT NULL DEFAULT GETDATE(),
 
     CONSTRAINT FK_AsuetoSucursal_Sucursal FOREIGN KEY (IdSucursal) REFERENCES Sucursal(Id) ON DELETE CASCADE
+);
+GO
+
+/* =========================================
+   17. LANDING PAGE CONFIG
+========================================= */
+CREATE TABLE LandingPageConfig (
+   Id INT IDENTITY(1,1) PRIMARY KEY,
+   IdClinica INT NOT NULL,
+   NombreLanding NVARCHAR(160) NOT NULL,
+   HeroTitulo NVARCHAR(180) NOT NULL,
+   HeroSubtitulo NVARCHAR(220) NOT NULL,
+   DescripcionGeneral NVARCHAR(1200) NULL,
+   TelefonoContacto NVARCHAR(80) NULL,
+   CorreoContacto NVARCHAR(180) NULL,
+   DireccionContacto NVARCHAR(280) NULL,
+   WhatsappContacto NVARCHAR(80) NULL,
+   CtaPrincipalTexto NVARCHAR(80) NULL,
+   CtaPrincipalUrl NVARCHAR(350) NULL,
+   ServiciosJson NVARCHAR(MAX) NOT NULL DEFAULT N'[]',
+   MetaTitulo NVARCHAR(180) NULL,
+   MetaDescripcion NVARCHAR(300) NULL,
+   DominioBase NVARCHAR(160) NULL,
+   MostrarHorariosSucursal BIT NOT NULL DEFAULT 1,
+   Publicada BIT NOT NULL DEFAULT 0,
+   FechaCreacion DATETIME NOT NULL DEFAULT GETDATE(),
+   FechaActualizacion DATETIME NOT NULL DEFAULT GETDATE(),
+
+   CONSTRAINT FK_LandingPageConfig_Clinica FOREIGN KEY (IdClinica) REFERENCES Clinica(Id) ON DELETE CASCADE,
+   CONSTRAINT UX_LandingPageConfig_Clinica UNIQUE (IdClinica)
 );
 GO
 

@@ -2,6 +2,7 @@ using Clynic.Application.DTOs.CatalogoPersonal;
 using Clynic.Application.Interfaces.Repositories;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Domain.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Clynic.Application.Services
 {
@@ -11,6 +12,12 @@ namespace Clynic.Application.Services
         {
             "Recepcionista",
             "Doctor"
+        };
+
+        private static readonly string[] EspecialidadesInmutablesGlobales =
+        {
+            "Encargado Global",
+            "Atencion al Cliente"
         };
 
         private readonly IClinicaRepository _clinicaRepository;
@@ -51,14 +58,24 @@ namespace Clynic.Application.Services
                     ? "Encargado de recibir a las personas y mantener el orden de atencion en la sucursal"
                     : "Profesional de salud que atiende consultas y requiere especialidad";
 
-                var rol = await _rolRepository.CrearAsync(new Rol
+                Rol rol;
+                try
                 {
-                    IdClinica = idClinica,
-                    IdSucursal = idSucursal,
-                    Nombre = nombreRol,
-                    Descripcion = descripcion,
-                    Activo = true
-                });
+                    rol = await _rolRepository.CrearAsync(new Rol
+                    {
+                        IdClinica = idClinica,
+                        IdSucursal = idSucursal,
+                        Nombre = nombreRol,
+                        Descripcion = descripcion,
+                        Activo = true
+                    });
+                }
+                catch (DbUpdateException)
+                {
+                    // Si otro request creo el mismo rol en paralelo, reutilizamos el existente.
+                    rol = await _rolRepository.ObtenerPorNombreEnSucursalAsync(idClinica, idSucursal, nombreRol)
+                        ?? throw new InvalidOperationException("No fue posible resolver el rol creado en paralelo.");
+                }
 
                 creados.Add(MapRol(rol));
             }
@@ -76,6 +93,11 @@ namespace Clynic.Application.Services
             await ValidarClinicaYSucursalAsync(createDto.IdClinica, createDto.IdSucursal);
 
             var nombre = createDto.Nombre.Trim();
+            if (!RolesBaseSucursal.Any(r => r.Equals(nombre, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("Solo se permiten los roles Doctor y Recepcionista.");
+            }
+
             var existente = await _rolRepository.ObtenerPorNombreEnSucursalAsync(createDto.IdClinica, createDto.IdSucursal, nombre);
             if (existente != null)
             {
@@ -98,8 +120,36 @@ namespace Clynic.Application.Services
         {
             await ValidarClinicaYSucursalAsync(idClinica, idSucursal);
 
+            // Garantiza que cada sucursal tenga siempre los roles operativos base.
+            await CrearRolesBaseSucursalAsync(idClinica, idSucursal);
+
             var roles = await _rolRepository.ObtenerActivosPorSucursalAsync(idClinica, idSucursal);
-            return roles.Select(MapRol).ToList();
+            var resultado = roles.Select(MapRol).ToList();
+
+            // Incluye el rol Admin global/clinica para permitir creacion de administradores desde UI.
+            var rolesClinica = await _rolRepository.ObtenerActivosAsync(idClinica);
+            var rolAdmin = rolesClinica.FirstOrDefault(r =>
+                !r.IdSucursal.HasValue &&
+                r.Nombre.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+
+            if (rolAdmin == null)
+            {
+                rolAdmin = await _rolRepository.CrearAsync(new Rol
+                {
+                    IdClinica = idClinica,
+                    IdSucursal = null,
+                    Nombre = "Admin",
+                    Descripcion = "Administrador de la clínica",
+                    Activo = true,
+                });
+            }
+
+            if (!resultado.Any(r => r.Id == rolAdmin.Id))
+            {
+                resultado.Insert(0, MapRol(rolAdmin));
+            }
+
+            return resultado;
         }
 
         public async Task<EspecialidadResponseDto> CrearEspecialidadAsync(CreateEspecialidadDto createDto)
@@ -116,6 +166,11 @@ namespace Clynic.Application.Services
             }
 
             var nombre = createDto.Nombre.Trim();
+            if (EspecialidadesInmutablesGlobales.Any(e => e.Equals(nombre, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("Esta especialidad es de sistema y no puede crearse ni editarse manualmente.");
+            }
+
             var existente = await _especialidadRepository.ObtenerPorNombreAsync(createDto.IdClinica, nombre);
             if (existente != null)
             {
@@ -160,9 +215,15 @@ namespace Clynic.Application.Services
                 throw new InvalidOperationException("La especialidad no existe, esta inactiva o no pertenece a la clinica.");
             }
 
-            var existente = await _sucursalEspecialidadRepository.ObtenerConfiguracionActivaAsync(createDto.IdSucursal, createDto.IdEspecialidad);
+            var existente = await _sucursalEspecialidadRepository.ObtenerConfiguracionAsync(createDto.IdSucursal, createDto.IdEspecialidad);
             if (existente != null)
             {
+                if (!existente.Activa)
+                {
+                    existente.Activa = true;
+                    existente = await _sucursalEspecialidadRepository.ActualizarAsync(existente);
+                }
+
                 return MapSucursalEspecialidad(existente);
             }
 
@@ -182,6 +243,57 @@ namespace Clynic.Application.Services
 
             var especialidades = await _sucursalEspecialidadRepository.ObtenerActivasPorSucursalAsync(idSucursal);
             return especialidades.Select(MapSucursalEspecialidad).ToList();
+        }
+
+        public async Task<IReadOnlyCollection<EspecialidadSucursalResponseDto>> ActualizarEstadoEspecialidadEnSucursalesAsync(ActualizarEstadoEspecialidadSucursalesDto dto)
+        {
+            if (dto == null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            var especialidad = await _especialidadRepository.ObtenerPorIdAsync(dto.IdEspecialidad);
+            if (especialidad == null || especialidad.IdClinica != dto.IdClinica)
+            {
+                throw new InvalidOperationException("La especialidad no existe o no pertenece a la clínica.");
+            }
+
+            var idsValidos = dto.IdsSucursales.Where(id => id > 0).Distinct().ToList();
+            if (idsValidos.Count == 0)
+            {
+                throw new InvalidOperationException("Debes enviar al menos una sucursal válida.");
+            }
+
+            var actualizadas = new List<EspecialidadSucursalResponseDto>();
+            foreach (var idSucursal in idsValidos)
+            {
+                await ValidarClinicaYSucursalAsync(dto.IdClinica, idSucursal);
+
+                var configuracion = await _sucursalEspecialidadRepository.ObtenerConfiguracionAsync(idSucursal, dto.IdEspecialidad);
+                if (configuracion == null)
+                {
+                    if (!dto.Activa)
+                    {
+                        continue;
+                    }
+
+                    configuracion = await _sucursalEspecialidadRepository.CrearAsync(new SucursalEspecialidad
+                    {
+                        IdSucursal = idSucursal,
+                        IdEspecialidad = dto.IdEspecialidad,
+                        Activa = true,
+                    });
+                }
+                else if (configuracion.Activa != dto.Activa)
+                {
+                    configuracion.Activa = dto.Activa;
+                    configuracion = await _sucursalEspecialidadRepository.ActualizarAsync(configuracion);
+                }
+
+                actualizadas.Add(MapSucursalEspecialidad(configuracion));
+            }
+
+            return actualizadas;
         }
 
         private async Task ValidarClinicaYSucursalAsync(int idClinica, int idSucursal)

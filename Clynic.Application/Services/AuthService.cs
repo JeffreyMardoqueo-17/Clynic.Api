@@ -105,7 +105,7 @@ namespace Clynic.Application.Services
                     ?? await _rolRepository.ObtenerPorNombreAsync(clinicaCreada.Id, "Administrador")
                     ?? await _rolRepository.CrearAsync(new Rol
                     {
-                        IdClinica = null,
+                        IdClinica = clinicaCreada.Id,
                         IdSucursal = null,
                         Nombre = RolAdminNombre,
                         Descripcion = "Usuario global administrador",
@@ -120,7 +120,7 @@ namespace Clynic.Application.Services
                 var especialidadAdmin = await _especialidadRepository.ObtenerPorNombreAsync(clinicaCreada.Id, EspecialidadAdminNombre)
                     ?? await _especialidadRepository.CrearAsync(new Especialidad
                     {
-                        IdClinica = null,
+                        IdClinica = clinicaCreada.Id,
                         Nombre = EspecialidadAdminNombre,
                         Descripcion = "Especialidad global para administradores",
                         Activa = true
@@ -252,7 +252,7 @@ namespace Clynic.Application.Services
                 {
                     rol = await _rolRepository.CrearAsync(new Rol
                     {
-                        IdClinica = null,
+                        IdClinica = registerDto.IdClinica,
                         IdSucursal = null,
                         Nombre = RolAdminNombre,
                         Descripcion = "Usuario global administrador",
@@ -298,7 +298,7 @@ namespace Clynic.Application.Services
                 var especialidadAdmin = await _especialidadRepository.ObtenerPorNombreAsync(registerDto.IdClinica, EspecialidadAdminNombre)
                     ?? await _especialidadRepository.CrearAsync(new Especialidad
                     {
-                        IdClinica = null,
+                        IdClinica = registerDto.IdClinica,
                         Nombre = EspecialidadAdminNombre,
                         Descripcion = "Especialidad global para administradores",
                         Activa = true

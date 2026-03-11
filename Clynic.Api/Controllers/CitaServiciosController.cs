@@ -1,4 +1,4 @@
-using Clynic.Application.DTOs.CitaServicios;
+﻿using Clynic.Application.DTOs.CitaServicios;
 using Clynic.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+    [Authorize(Roles = "Admin,Doctor,Recepcionista")]
     public class CitaServiciosController : ControllerBase
     {
         private readonly ICitaServicioService _citaServicioService;
@@ -33,7 +33,7 @@ namespace Clynic.Api.Controllers
             var cita = await _citaService.ObtenerPorIdAsync(idCita);
             if (cita == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {idCita}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {idCita}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
@@ -72,7 +72,7 @@ namespace Clynic.Api.Controllers
             var cita = await _citaService.ObtenerPorIdAsync(dto.IdCita);
             if (cita == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {dto.IdCita}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {dto.IdCita}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
@@ -105,13 +105,13 @@ namespace Clynic.Api.Controllers
             var detalle = await _citaServicioService.ObtenerPorIdAsync(id);
             if (detalle == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el detalle de cita con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el detalle de cita con ID {id}" });
             }
 
             var cita = await _citaService.ObtenerPorIdAsync(detalle.IdCita);
             if (cita == null)
             {
-                return NotFound(new { mensaje = $"No se encontró la cita con ID {detalle.IdCita}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ la cita con ID {detalle.IdCita}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != cita.IdClinica)
@@ -130,7 +130,7 @@ namespace Clynic.Api.Controllers
             var eliminado = await _citaServicioService.EliminarAsync(id);
             if (!eliminado)
             {
-                return NotFound(new { mensaje = $"No se encontró el detalle de cita con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el detalle de cita con ID {id}" });
             }
 
             return NoContent();
@@ -149,3 +149,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

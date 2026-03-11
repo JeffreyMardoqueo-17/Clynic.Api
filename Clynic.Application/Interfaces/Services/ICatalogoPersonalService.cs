@@ -13,5 +13,6 @@ namespace Clynic.Application.Interfaces.Services
 
         Task<EspecialidadSucursalResponseDto> AsignarEspecialidadASucursalAsync(AsignarEspecialidadSucursalDto createDto);
         Task<IReadOnlyCollection<EspecialidadSucursalResponseDto>> ObtenerEspecialidadesPorSucursalAsync(int idClinica, int idSucursal);
+        Task<IReadOnlyCollection<EspecialidadSucursalResponseDto>> ActualizarEstadoEspecialidadEnSucursalesAsync(ActualizarEstadoEspecialidadSucursalesDto dto);
     }
 }

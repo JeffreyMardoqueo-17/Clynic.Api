@@ -10,6 +10,8 @@ namespace Clynic.Domain.Models
         public int Id { get; set; }
         public int IdClinica { get; set; }
         public Clinica? Clinica { get; set; }
+        public int IdEspecialidad { get; set; }
+        public Especialidad? Especialidad { get; set; }
         public string NombreServicio { get; set; } = string.Empty;
         public int DuracionMin { get; set; }
         public decimal PrecioBase { get; set; }

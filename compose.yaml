@@ -1,7 +1,7 @@
 services:
   sqlserver:
     container_name: clynic-sql
-    image: ${DOCKERHUB_USERNAME:-local}/clynic-sqlserver:${IMAGE_TAG:-VersionPrueba}
+    image: ${DOCKERHUB_USERNAME:-local}/clynic-sqlserver:${IMAGE_TAG:-LandingV2}
     build:
       context: .
       dockerfile: docker/sqlserver/Dockerfile
@@ -30,7 +30,7 @@ services:
 
   api:
     container_name: clynic-api
-    image: ${DOCKERHUB_USERNAME:-local}/clynic-api:${IMAGE_TAG:-VersionPrueba}
+    image: ${DOCKERHUB_USERNAME:-local}/clynic-api:${IMAGE_TAG:-LandingV2}
     build:
       context: .
       dockerfile: Clynic.Api/Dockerfile

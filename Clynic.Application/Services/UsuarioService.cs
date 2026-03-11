@@ -4,7 +4,6 @@ using Clynic.Application.Interfaces.Repositories;
 using Clynic.Application.Interfaces.Services;
 using Clynic.Application.Rules;
 using Clynic.Domain.Models;
-using Clynic.Domain.Models.Enums;
 using System.Security.Cryptography;
 
 namespace Clynic.Application.Services
@@ -130,73 +129,28 @@ namespace Clynic.Application.Services
                 throw new InvalidOperationException("La sucursal especificada no pertenece a la clínica");
             }
 
+            var rol = await ValidarConfiguracionRolAsync(
+                createDto.IdRol,
+                createDto.IdClinica,
+                createDto.IdSucursal,
+                createDto.IdEspecialidad);
+
+            var nombreRol = rol.Nombre?.Trim() ?? string.Empty;
+            var esAdmin = EsRolAdmin(nombreRol);
+
             var usuario = new Usuario
             {
                 NombreCompleto = createDto.NombreCompleto.Trim(),
                 Correo = createDto.Correo.Trim().ToLower(),
                 ClaveHash = _passwordHasher.Hash(createDto.Clave),
                 IdRol = createDto.IdRol,
-                IdEspecialidad = createDto.IdEspecialidad,
+                IdEspecialidad = RolRequiereEspecialidad(nombreRol) ? createDto.IdEspecialidad : null,
                 IdClinica = createDto.IdClinica,
                 IdSucursal = createDto.IdSucursal,
                 Activo = true,
+                DebeCambiarClave = !esAdmin,
                 FechaCreacion = DateTime.UtcNow
             };
-
-            var esAdminSistema = createDto.IdRol == (int)RolSistema.Admin;
-            string nombreRol;
-
-            if (esAdminSistema)
-            {
-                nombreRol = "Admin";
-                usuario.DebeCambiarClave = false;
-            }
-            else
-            {
-                if (!createDto.IdSucursal.HasValue)
-                {
-                    throw new InvalidOperationException("Los roles operativos requieren una sucursal asignada.");
-                }
-
-                var rol = await _rolRepository.ObtenerPorIdAsync(createDto.IdRol)
-                    ?? throw new InvalidOperationException("El rol especificado no existe.");
-
-                if (!rol.Activo)
-                {
-                    throw new InvalidOperationException("El rol especificado está inactivo.");
-                }
-
-                if (rol.IdClinica != createDto.IdClinica || rol.IdSucursal != createDto.IdSucursal.Value)
-                {
-                    throw new InvalidOperationException("El rol especificado no pertenece a la sucursal de la clínica.");
-                }
-
-                if (createDto.IdEspecialidad.HasValue)
-                {
-                    var especialidadExiste = await _especialidadRepository.ExisteActivaAsync(createDto.IdClinica, createDto.IdEspecialidad.Value);
-                    var especialidadSucursal = await _sucursalEspecialidadRepository.ObtenerConfiguracionActivaAsync(
-                        createDto.IdSucursal.Value,
-                        createDto.IdEspecialidad.Value);
-
-                    if (!especialidadExiste || especialidadSucursal == null)
-                    {
-                        throw new InvalidOperationException("La especialidad especificada no está activa para la sucursal.");
-                    }
-                }
-
-                if (RolRequiereEspecialidad(rol.Nombre) && !createDto.IdEspecialidad.HasValue)
-                {
-                    throw new InvalidOperationException("El rol Doctor requiere una especialidad activa para la sucursal.");
-                }
-
-                if (!RolRequiereEspecialidad(rol.Nombre) && createDto.IdEspecialidad.HasValue)
-                {
-                    throw new InvalidOperationException("Solo el rol Doctor puede tener especialidad asignada.");
-                }
-
-                nombreRol = rol.Nombre;
-                usuario.DebeCambiarClave = true;
-            }
 
             var usuarioCreado = await _repository.CrearAsync(usuario);
 
@@ -226,73 +180,28 @@ namespace Clynic.Application.Services
 
             var claveTemporal = GenerarClaveTemporal(12);
 
+            var rol = await ValidarConfiguracionRolAsync(
+                createDto.IdRol,
+                createDto.IdClinica,
+                createDto.IdSucursal,
+                createDto.IdEspecialidad);
+
+            var nombreRolCreate = rol.Nombre?.Trim() ?? string.Empty;
+            var esAdmin = EsRolAdmin(nombreRolCreate);
+
             var usuario = new Usuario
             {
                 NombreCompleto = createDto.NombreCompleto.Trim(),
                 Correo = createDto.Correo.Trim().ToLower(),
                 ClaveHash = _passwordHasher.Hash(claveTemporal),
                 IdRol = createDto.IdRol,
-                IdEspecialidad = createDto.IdEspecialidad,
+                IdEspecialidad = RolRequiereEspecialidad(nombreRolCreate) ? createDto.IdEspecialidad : null,
                 IdClinica = createDto.IdClinica,
                 IdSucursal = createDto.IdSucursal,
                 Activo = true,
-                DebeCambiarClave = true,
+                DebeCambiarClave = !esAdmin,
                 FechaCreacion = DateTime.UtcNow
             };
-
-            var esAdminSistemaCreate = createDto.IdRol == (int)RolSistema.Admin;
-            string nombreRolCreate;
-
-            if (esAdminSistemaCreate)
-            {
-                nombreRolCreate = "Admin";
-                usuario.DebeCambiarClave = false;
-            }
-            else
-            {
-                if (!createDto.IdSucursal.HasValue)
-                {
-                    throw new InvalidOperationException("Los roles operativos requieren una sucursal asignada.");
-                }
-
-                var rol = await _rolRepository.ObtenerPorIdAsync(createDto.IdRol)
-                    ?? throw new InvalidOperationException("El rol especificado no existe.");
-
-                if (!rol.Activo)
-                {
-                    throw new InvalidOperationException("El rol especificado está inactivo.");
-                }
-
-                if (rol.IdClinica != createDto.IdClinica || rol.IdSucursal != createDto.IdSucursal.Value)
-                {
-                    throw new InvalidOperationException("El rol especificado no pertenece a la sucursal de la clínica.");
-                }
-
-                if (createDto.IdEspecialidad.HasValue)
-                {
-                    var especialidadExiste = await _especialidadRepository.ExisteActivaAsync(createDto.IdClinica, createDto.IdEspecialidad.Value);
-                    var especialidadSucursal = await _sucursalEspecialidadRepository.ObtenerConfiguracionActivaAsync(
-                        createDto.IdSucursal.Value,
-                        createDto.IdEspecialidad.Value);
-
-                    if (!especialidadExiste || especialidadSucursal == null)
-                    {
-                        throw new InvalidOperationException("La especialidad especificada no está activa para la sucursal.");
-                    }
-                }
-
-                if (RolRequiereEspecialidad(rol.Nombre) && !createDto.IdEspecialidad.HasValue)
-                {
-                    throw new InvalidOperationException("El rol Doctor requiere una especialidad activa para la sucursal.");
-                }
-
-                if (!RolRequiereEspecialidad(rol.Nombre) && createDto.IdEspecialidad.HasValue)
-                {
-                    throw new InvalidOperationException("Solo el rol Doctor puede tener especialidad asignada.");
-                }
-
-                nombreRolCreate = rol.Nombre;
-            }
 
             var usuarioCreado = await _repository.CrearAsync(usuario);
 
@@ -339,81 +248,28 @@ namespace Clynic.Application.Services
                 usuario.Correo = updateDto.Correo.Trim().ToLower();
             }
 
-            if (updateDto.IdRol.HasValue)
+            var rolObjetivoId = updateDto.IdRol ?? usuario.IdRol;
+            var sucursalObjetivoId = updateDto.IdSucursal ?? usuario.IdSucursal;
+            var especialidadObjetivoId = updateDto.IdEspecialidad ?? usuario.IdEspecialidad;
+
+            var rolObjetivo = await _rolRepository.ObtenerPorIdAsync(rolObjetivoId)
+                ?? throw new InvalidOperationException("El rol especificado no existe.");
+
+            var nombreRolObjetivo = rolObjetivo.Nombre?.Trim() ?? string.Empty;
+            await ValidarConfiguracionRolAsync(
+                rolObjetivoId,
+                usuario.IdClinica,
+                sucursalObjetivoId,
+                especialidadObjetivoId);
+
+            if (!RolRequiereEspecialidad(nombreRolObjetivo))
             {
-                var rol = await _rolRepository.ObtenerPorIdAsync(updateDto.IdRol.Value)
-                    ?? throw new InvalidOperationException("El rol especificado no existe.");
-
-                if (!rol.Activo)
-                {
-                    throw new InvalidOperationException("El rol especificado está inactivo.");
-                }
-
-                if (!usuario.IdSucursal.HasValue)
-                {
-                    throw new InvalidOperationException("El usuario debe tener sucursal para asignar roles operativos.");
-                }
-
-                if (rol.IdClinica != usuario.IdClinica || rol.IdSucursal != usuario.IdSucursal.Value)
-                {
-                    throw new InvalidOperationException("El rol especificado no pertenece a la sucursal del usuario.");
-                }
-
-                usuario.IdRol = updateDto.IdRol.Value;
+                especialidadObjetivoId = null;
             }
 
-            if (updateDto.IdEspecialidad.HasValue)
-            {
-                if (!usuario.IdSucursal.HasValue)
-                {
-                    throw new InvalidOperationException("El usuario debe tener sucursal para asignar especialidad.");
-                }
-
-                var especialidadExiste = await _especialidadRepository.ExisteActivaAsync(usuario.IdClinica, updateDto.IdEspecialidad.Value);
-                var especialidadSucursal = await _sucursalEspecialidadRepository.ObtenerConfiguracionActivaAsync(
-                    usuario.IdSucursal.Value,
-                    updateDto.IdEspecialidad.Value);
-
-                if (!especialidadExiste)
-                {
-                    throw new InvalidOperationException("La especialidad especificada no existe, está inactiva o no pertenece a la clínica.");
-                }
-
-                if (especialidadSucursal == null)
-                {
-                    throw new InvalidOperationException("La especialidad especificada no está activa para la sucursal del usuario.");
-                }
-
-                usuario.IdEspecialidad = updateDto.IdEspecialidad.Value;
-            }
-
-            if (updateDto.IdSucursal.HasValue)
-            {
-                if (!await _rules.SucursalPerteneceAClinicaAsync(updateDto.IdSucursal.Value, usuario.IdClinica))
-                    throw new InvalidOperationException("La sucursal especificada no pertenece a la clínica");
-
-                usuario.IdSucursal = updateDto.IdSucursal.Value;
-            }
-
-            if (usuario.IdRol == (int)RolSistema.Admin)
-            {
-                usuario.IdEspecialidad = null;
-            }
-            else
-            {
-                var rolActual = await _rolRepository.ObtenerPorIdAsync(usuario.IdRol)
-                    ?? throw new InvalidOperationException("El rol actual del usuario no existe.");
-
-                if (RolRequiereEspecialidad(rolActual.Nombre) && !usuario.IdEspecialidad.HasValue)
-                {
-                    throw new InvalidOperationException("El rol Doctor requiere una especialidad activa para la sucursal.");
-                }
-
-                if (!RolRequiereEspecialidad(rolActual.Nombre) && usuario.IdEspecialidad.HasValue)
-                {
-                    throw new InvalidOperationException("Solo el rol Doctor puede tener especialidad asignada.");
-                }
-            }
+            usuario.IdRol = rolObjetivoId;
+            usuario.IdSucursal = sucursalObjetivoId;
+            usuario.IdEspecialidad = especialidadObjetivoId;
 
             if (updateDto.Activo.HasValue)
                 usuario.Activo = updateDto.Activo.Value;
@@ -452,7 +308,7 @@ namespace Clynic.Application.Services
                 usuario.Correo,
                 usuario.NombreCompleto,
                 nombreClinica,
-                usuario.IdRol == (int)RolSistema.Admin ? "Admin" : (usuario.Rol?.Nombre ?? "Usuario"),
+                string.IsNullOrWhiteSpace(usuario.Rol?.Nombre) ? "Usuario" : usuario.Rol!.Nombre,
                 claveTemporal);
 
             return true;
@@ -507,7 +363,7 @@ namespace Clynic.Application.Services
                 NombreCompleto = usuario.NombreCompleto,
                 Correo = usuario.Correo,
                 IdRol = usuario.IdRol,
-                NombreRol = usuario.IdRol == (int)RolSistema.Admin ? "Admin" : (usuario.Rol?.Nombre ?? string.Empty),
+                NombreRol = usuario.Rol?.Nombre ?? string.Empty,
                 DescripcionRol = usuario.Rol?.Descripcion ?? string.Empty,
                 IdEspecialidad = usuario.IdEspecialidad,
                 NombreEspecialidad = usuario.Especialidad?.Nombre,
@@ -519,6 +375,103 @@ namespace Clynic.Application.Services
                 NombreSucursal = usuario.Sucursal?.Nombre,
                 FechaCreacion = usuario.FechaCreacion
             };
+        }
+
+        private async Task<Rol> ValidarConfiguracionRolAsync(int idRol, int idClinica, int? idSucursal, int? idEspecialidad)
+        {
+            var rol = await _rolRepository.ObtenerPorIdAsync(idRol)
+                ?? throw new InvalidOperationException("El rol especificado no existe.");
+
+            if (!rol.Activo)
+            {
+                throw new InvalidOperationException("El rol especificado está inactivo.");
+            }
+
+            var nombreRol = rol.Nombre?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(nombreRol))
+            {
+                throw new InvalidOperationException("El rol especificado no tiene un nombre válido.");
+            }
+
+            if (!EsRolPermitido(nombreRol))
+            {
+                throw new InvalidOperationException("Solo se permiten los roles Admin, Doctor y Recepcionista.");
+            }
+
+            if (rol.IdClinica.HasValue && rol.IdClinica.Value != idClinica)
+            {
+                throw new InvalidOperationException("El rol especificado no pertenece a la clínica del usuario.");
+            }
+
+            if (rol.IdSucursal.HasValue)
+            {
+                if (!idSucursal.HasValue)
+                {
+                    throw new InvalidOperationException("El rol especificado requiere una sucursal asignada.");
+                }
+
+                if (rol.IdSucursal.Value != idSucursal.Value)
+                {
+                    throw new InvalidOperationException("El rol especificado no pertenece a la sucursal indicada.");
+                }
+            }
+
+            if (idSucursal.HasValue && !await _rules.SucursalPerteneceAClinicaAsync(idSucursal.Value, idClinica))
+            {
+                throw new InvalidOperationException("La sucursal especificada no pertenece a la clínica.");
+            }
+
+            if (RolRequiereEspecialidad(nombreRol))
+            {
+                if (!idSucursal.HasValue)
+                {
+                    throw new InvalidOperationException("El rol Doctor requiere una sucursal asignada.");
+                }
+
+                if (!idEspecialidad.HasValue)
+                {
+                    throw new InvalidOperationException("El rol Doctor requiere una especialidad activa para la sucursal.");
+                }
+
+                var especialidadExiste = await _especialidadRepository.ExisteActivaAsync(idClinica, idEspecialidad.Value);
+                if (!especialidadExiste)
+                {
+                    throw new InvalidOperationException("La especialidad especificada no existe o no está activa para la clínica.");
+                }
+
+                var especialidadSucursal = await _sucursalEspecialidadRepository.ObtenerConfiguracionActivaAsync(
+                    idSucursal.Value,
+                    idEspecialidad.Value);
+
+                if (especialidadSucursal == null)
+                {
+                    throw new InvalidOperationException("La especialidad especificada no está activa para la sucursal.");
+                }
+
+                return rol;
+            }
+
+            if (idEspecialidad.HasValue)
+            {
+                throw new InvalidOperationException("Solo el rol Doctor puede tener especialidad asignada.");
+            }
+
+            return rol;
+        }
+
+        private static bool EsRolAdmin(string nombreRol)
+        {
+            return nombreRol.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EsRolRecepcionista(string nombreRol)
+        {
+            return nombreRol.Equals("Recepcionista", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EsRolPermitido(string nombreRol)
+        {
+            return EsRolAdmin(nombreRol) || EsRolRecepcionista(nombreRol) || RolRequiereEspecialidad(nombreRol);
         }
 
         private static bool RolRequiereEspecialidad(string nombreRol)

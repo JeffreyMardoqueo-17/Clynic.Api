@@ -273,6 +273,48 @@ namespace Clynic.Application.Services
             await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);
         }
 
+        public async Task EnviarNotificacionCitaCanceladaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraInicio,
+            string motivo)
+        {
+            var asunto = "Clynic - Tu cita fue cancelada";
+            var motivoSafe = string.IsNullOrWhiteSpace(motivo) ? "No especificado" : WebUtility.HtmlEncode(motivo.Trim());
+            var cuerpoHtml = $@"
+<p>Hola {WebUtility.HtmlEncode(nombrePaciente)},</p>
+<p>Tu cita en <b>{WebUtility.HtmlEncode(nombreClinica)}</b> ({WebUtility.HtmlEncode(nombreSucursal)}) fue cancelada.</p>
+<p><b>Fecha:</b> {fechaHoraInicio:dd/MM/yyyy HH:mm}</p>
+<p><b>Motivo:</b> {motivoSafe}</p>
+<p>Si deseas reprogramar, contáctanos.</p>";
+
+            await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);
+        }
+
+        public async Task EnviarNotificacionCitaReprogramadaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraAnterior,
+            DateTime fechaHoraNuevaInicio,
+            DateTime fechaHoraNuevaFin,
+            string motivo)
+        {
+            var asunto = "Clynic - Tu cita fue reprogramada";
+            var motivoSafe = string.IsNullOrWhiteSpace(motivo) ? "No especificado" : WebUtility.HtmlEncode(motivo.Trim());
+            var cuerpoHtml = $@"
+<p>Hola {WebUtility.HtmlEncode(nombrePaciente)},</p>
+<p>Tu cita en <b>{WebUtility.HtmlEncode(nombreClinica)}</b> ({WebUtility.HtmlEncode(nombreSucursal)}) fue reprogramada.</p>
+<p><b>Horario anterior:</b> {fechaHoraAnterior:dd/MM/yyyy HH:mm}</p>
+<p><b>Nuevo horario:</b> {fechaHoraNuevaInicio:dd/MM/yyyy HH:mm} - {fechaHoraNuevaFin:HH:mm}</p>
+<p><b>Motivo:</b> {motivoSafe}</p>";
+
+            await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);
+        }
+
         public async Task EnviarEmailAsync(string emailDestino, string asunto, string cuerpoHtml)
         {
             await EnviarEmailHtmlAsync(emailDestino, asunto, cuerpoHtml);

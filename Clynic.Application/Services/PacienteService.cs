@@ -10,17 +10,60 @@ namespace Clynic.Application.Services
     public class PacienteService : IPacienteService
     {
         private readonly IPacienteRepository _pacienteRepository;
+        private readonly IValidator<CreatePacienteDto> _createPacienteValidator;
         private readonly IValidator<UpdatePacienteDto> _updatePacienteValidator;
         private readonly IValidator<UpdateHistorialClinicoDto> _updateHistorialValidator;
 
         public PacienteService(
             IPacienteRepository pacienteRepository,
+            IValidator<CreatePacienteDto> createPacienteValidator,
             IValidator<UpdatePacienteDto> updatePacienteValidator,
             IValidator<UpdateHistorialClinicoDto> updateHistorialValidator)
         {
             _pacienteRepository = pacienteRepository ?? throw new ArgumentNullException(nameof(pacienteRepository));
+            _createPacienteValidator = createPacienteValidator ?? throw new ArgumentNullException(nameof(createPacienteValidator));
             _updatePacienteValidator = updatePacienteValidator ?? throw new ArgumentNullException(nameof(updatePacienteValidator));
             _updateHistorialValidator = updateHistorialValidator ?? throw new ArgumentNullException(nameof(updateHistorialValidator));
+        }
+
+        public async Task<PacienteResponseDto> CrearAsync(int idClinica, CreatePacienteDto dto)
+        {
+            if (idClinica <= 0)
+            {
+                throw new ArgumentException("El ID de la clínica debe ser mayor a cero.", nameof(idClinica));
+            }
+
+            if (dto == null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            var validationResult = await _createPacienteValidator.ValidateAsync(dto);
+            if (!validationResult.IsValid)
+            {
+                var errores = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
+                throw new ValidationException($"Errores de validación: {errores}");
+            }
+
+            var correoNormalizado = dto.Correo.Trim().ToLower();
+            var existente = await _pacienteRepository.ObtenerPorCorreoAsync(idClinica, correoNormalizado);
+            if (existente != null)
+            {
+                throw new ValidationException("Ya existe un paciente registrado con ese correo en la clínica.");
+            }
+
+            var paciente = await _pacienteRepository.CrearAsync(new Paciente
+            {
+                IdClinica = idClinica,
+                Nombres = dto.Nombres.Trim(),
+                Apellidos = dto.Apellidos.Trim(),
+                Telefono = dto.Telefono?.Trim() ?? string.Empty,
+                Correo = correoNormalizado,
+                FechaNacimiento = dto.FechaNacimiento?.Date,
+                IdEspecialidad = dto.IdEspecialidad,
+            });
+
+            return MapToResponseDto(paciente);
         }
 
         public async Task<IEnumerable<PacienteResponseDto>> ObtenerPorClinicaAsync(int idClinica, string? busqueda = null)

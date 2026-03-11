@@ -1,4 +1,4 @@
-using Clynic.Application.DTOs.Dashboard;
+﻿using Clynic.Application.DTOs.Dashboard;
 using Clynic.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+    [Authorize(Roles = "Admin,Doctor,Recepcionista")]
     public class DashboardController : ControllerBase
     {
         private readonly IDashboardService _dashboardService;
@@ -63,7 +63,7 @@ namespace Clynic.Api.Controllers
                     "mensual" => (hoy.AddDays(-28), hoy.AddDays(1)),
                     "anual" => (hoy.AddDays(-363), hoy.AddDays(1)),
                     "todo" => (new DateTime(1970, 1, 1), hoy.AddDays(1)),
-                    _ => throw new ArgumentException("Periodo inválido. Usa: semanal, mensual, anual o todo.")
+                    _ => throw new ArgumentException("Periodo invÃ¡lido. Usa: semanal, mensual, anual o todo.")
                 };
             }
 
@@ -119,3 +119,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

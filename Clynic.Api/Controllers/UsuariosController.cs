@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Clynic.Application.DTOs.Usuarios;
 using Clynic.Application.Interfaces.Services;
@@ -33,7 +33,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpGet("clinica/{idClinica}")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<UsuarioResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -51,7 +51,7 @@ namespace Clynic.Api.Controllers
         }
 
         [HttpGet("clinica/{idClinica}/sucursal/{idSucursal}")]
-        [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta,Recepcionista")]
+        [Authorize(Roles = "Admin,Doctor,Recepcionista")]
         [ProducesResponseType(typeof(IEnumerable<UsuarioResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -105,7 +105,7 @@ namespace Clynic.Api.Controllers
 
             if (usuario == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -163,7 +163,7 @@ namespace Clynic.Api.Controllers
 
             if (updateDto == null)
             {
-                return BadRequest(new { mensaje = "Los datos de actualización son requeridos" });
+                return BadRequest(new { mensaje = "Los datos de actualizaciÃ³n son requeridos" });
             }
 
             var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -178,7 +178,7 @@ namespace Clynic.Api.Controllers
 
             if (resultado == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             return Ok(resultado);
@@ -203,7 +203,7 @@ namespace Clynic.Api.Controllers
 
             if (!eliminado)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             return NoContent();
@@ -227,7 +227,7 @@ namespace Clynic.Api.Controllers
             var usuario = await _usuarioService.ObtenerPorIdAsync(id);
             if (usuario == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
             var idClinicaClaim = User.FindFirst("IdClinica")?.Value;
@@ -239,10 +239,10 @@ namespace Clynic.Api.Controllers
             var reenviado = await _usuarioService.ReenviarCredencialesTemporalesAsync(id);
             if (!reenviado)
             {
-                return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
             }
 
-            return Ok(new { mensaje = "Invitación reenviada correctamente" });
+            return Ok(new { mensaje = "InvitaciÃ³n reenviada correctamente" });
         }
 
         [HttpPut("{id}/cambiar-clave")]
@@ -278,7 +278,7 @@ namespace Clynic.Api.Controllers
 
                 if (!resultado)
                 {
-                    return NotFound(new { mensaje = $"No se encontró el usuario con ID {id}" });
+                    return NotFound(new { mensaje = $"No se encontrÃ³ el usuario con ID {id}" });
                 }
 
                 return Ok(new { mensaje = "Clave actualizada exitosamente" });
@@ -290,3 +290,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

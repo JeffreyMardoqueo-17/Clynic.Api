@@ -14,6 +14,7 @@ namespace Clynic.Application.Validators
 
             RuleFor(x => x)
                 .Must(x =>
+                    x.IdEspecialidad.HasValue ||
                     x.NombreServicio != null ||
                     x.DuracionMin.HasValue ||
                     x.PrecioBase.HasValue ||

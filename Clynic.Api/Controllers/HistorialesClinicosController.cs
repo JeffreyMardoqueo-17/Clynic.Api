@@ -1,4 +1,4 @@
-using Clynic.Application.DTOs.HistorialesClinicos;
+﻿using Clynic.Application.DTOs.HistorialesClinicos;
 using Clynic.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace Clynic.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin,Doctor,Nutricionista,Fisioterapeuta")]
+    [Authorize(Roles = "Admin,Doctor")]
     public class HistorialesClinicosController : ControllerBase
     {
         private readonly IHistorialClinicoService _historialClinicoService;
@@ -33,7 +33,7 @@ namespace Clynic.Api.Controllers
             var paciente = await _pacienteService.ObtenerPorIdAsync(idPaciente);
             if (paciente == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el paciente con ID {idPaciente}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el paciente con ID {idPaciente}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != paciente.IdClinica)
@@ -44,7 +44,7 @@ namespace Clynic.Api.Controllers
             var historial = await _historialClinicoService.ObtenerPorPacienteAsync(idPaciente);
             if (historial == null)
             {
-                return NotFound(new { mensaje = $"No se encontró historial clínico para el paciente {idPaciente}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ historial clÃ­nico para el paciente {idPaciente}" });
             }
 
             return Ok(historial);
@@ -61,13 +61,13 @@ namespace Clynic.Api.Controllers
         {
             if (dto == null)
             {
-                return BadRequest(new { mensaje = "Los datos del historial clínico son requeridos." });
+                return BadRequest(new { mensaje = "Los datos del historial clÃ­nico son requeridos." });
             }
 
             var paciente = await _pacienteService.ObtenerPorIdAsync(idPaciente);
             if (paciente == null)
             {
-                return NotFound(new { mensaje = $"No se encontró el paciente con ID {idPaciente}" });
+                return NotFound(new { mensaje = $"No se encontrÃ³ el paciente con ID {idPaciente}" });
             }
 
             if (!TryGetIdClinicaToken(out var idClinicaToken) || idClinicaToken != paciente.IdClinica)
@@ -86,3 +86,4 @@ namespace Clynic.Api.Controllers
         }
     }
 }
+

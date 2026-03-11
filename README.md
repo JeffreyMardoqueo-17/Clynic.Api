@@ -47,12 +47,12 @@ Deberias ver:
 
 ---
 
-## 🐳 Publicar imagenes en Docker Hub (VersionPrueba)
+## 🐳 Publicar imagenes en Docker Hub (LandingV2)
 
 ### 1. Configurar variables en `.env`
 ```dotenv
 DOCKERHUB_USERNAME=tu_usuario_dockerhub
-IMAGE_TAG=VersionPrueba
+IMAGE_TAG=LandingV2
 FRONTEND_URL=https://clynic-sys.vercel.app
 ```
 
@@ -68,8 +68,8 @@ docker compose build
 
 ### 4. Subir imagenes
 ```bash
-docker push <tu_usuario_dockerhub>/clynic-api:VersionPrueba
-docker push <tu_usuario_dockerhub>/clynic-sqlserver:VersionPrueba
+docker push <tu_usuario_dockerhub>/clynic-api:LandingV2
+docker push <tu_usuario_dockerhub>/clynic-sqlserver:LandingV2
 ```
 
 ---

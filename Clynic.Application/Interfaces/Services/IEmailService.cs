@@ -14,6 +14,22 @@ namespace Clynic.Application.Interfaces.Services
             DateTime fechaHoraFin,
             IEnumerable<string> servicios,
             string notas);
+        Task EnviarNotificacionCitaCanceladaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraInicio,
+            string motivo);
+        Task EnviarNotificacionCitaReprogramadaAsync(
+            string emailDestino,
+            string nombrePaciente,
+            string nombreClinica,
+            string nombreSucursal,
+            DateTime fechaHoraAnterior,
+            DateTime fechaHoraNuevaInicio,
+            DateTime fechaHoraNuevaFin,
+            string motivo);
         Task EnviarEmailAsync(string emailDestino, string asunto, string cuerpoHtml);
     }
 }

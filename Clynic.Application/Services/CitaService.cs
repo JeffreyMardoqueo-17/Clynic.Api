@@ -18,6 +18,7 @@ namespace Clynic.Application.Services
         private readonly IHorarioSucursalRepository _horarioSucursalRepository;
         private readonly ISucursalEspecialidadRepository _sucursalEspecialidadRepository;
         private readonly IUsuarioRepository _usuarioRepository;
+        private readonly ICitaActividadRepository _citaActividadRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
         private readonly IValidator<CreateCitaPublicaDto> _createCitaValidator;
@@ -34,6 +35,7 @@ namespace Clynic.Application.Services
             IHorarioSucursalRepository horarioSucursalRepository,
             ISucursalEspecialidadRepository sucursalEspecialidadRepository,
             IUsuarioRepository usuarioRepository,
+            ICitaActividadRepository citaActividadRepository,
             IUnitOfWork unitOfWork,
             IEmailService emailService,
             IValidator<CreateCitaPublicaDto> createCitaValidator,
@@ -49,6 +51,7 @@ namespace Clynic.Application.Services
             _horarioSucursalRepository = horarioSucursalRepository ?? throw new ArgumentNullException(nameof(horarioSucursalRepository));
             _sucursalEspecialidadRepository = sucursalEspecialidadRepository ?? throw new ArgumentNullException(nameof(sucursalEspecialidadRepository));
             _usuarioRepository = usuarioRepository ?? throw new ArgumentNullException(nameof(usuarioRepository));
+            _citaActividadRepository = citaActividadRepository ?? throw new ArgumentNullException(nameof(citaActividadRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _createCitaValidator = createCitaValidator ?? throw new ArgumentNullException(nameof(createCitaValidator));
@@ -119,6 +122,17 @@ namespace Clynic.Application.Services
                 var subtotal = servicios.Sum(s => s.PrecioBase);
                 var fechaFin = dto.FechaHoraInicioPlan.AddMinutes(duracionTotal);
 
+                var duplicadoPaciente = await _citaRepository.ExisteTraslapePacienteAsync(
+                    dto.IdClinica,
+                    paciente.Id,
+                    dto.FechaHoraInicioPlan,
+                    fechaFin);
+
+                if (duplicadoPaciente)
+                {
+                    throw new ValidationException("El paciente ya tiene una cita activa en ese horario.");
+                }
+
                 await ValidarCapacidadSucursalAsync(
                     dto.IdClinica,
                     dto.IdSucursal,
@@ -169,6 +183,22 @@ namespace Clynic.Application.Services
             catch
             {
             }
+
+            await RegistrarActividadAsync(
+                creada.Id,
+                creada.IdClinica,
+                creada.IdSucursal,
+                null,
+                "Publico",
+                "agendar",
+                $"Cita pública creada para paciente #{creada.IdPaciente} ({creada.FechaHoraInicioPlan:yyyy-MM-dd HH:mm}).");
+
+            await _doctorNotificationService.NotifyAppointmentUpdatedAsync(
+                creada.IdClinica,
+                creada.IdSucursal,
+                creada.Id,
+                "cita-creada",
+                "Nueva cita registrada.");
 
             return MapToResponseDto(creada);
         }
@@ -440,7 +470,7 @@ namespace Clynic.Application.Services
             };
         }
 
-        public async Task<CitaResponseDto> CrearInternaAsync(CreateCitaInternaDto dto)
+        public async Task<CitaResponseDto> CrearInternaAsync(CreateCitaInternaDto dto, int? idUsuarioEjecutor = null, string? rolEjecutor = null)
         {
             if (dto == null)
             {
@@ -506,6 +536,17 @@ namespace Clynic.Application.Services
                 var subtotal = servicios.Sum(s => s.PrecioBase);
                 var fechaFin = dto.FechaHoraInicioPlan.AddMinutes(duracionTotal);
 
+                var duplicadoPaciente = await _citaRepository.ExisteTraslapePacienteAsync(
+                    dto.IdClinica,
+                    dto.IdPaciente,
+                    dto.FechaHoraInicioPlan,
+                    fechaFin);
+
+                if (duplicadoPaciente)
+                {
+                    throw new ValidationException("El paciente ya tiene una cita activa en ese horario.");
+                }
+
                 await ValidarCapacidadSucursalAsync(
                     dto.IdClinica,
                     dto.IdSucursal,
@@ -552,6 +593,22 @@ namespace Clynic.Application.Services
                 return await _citaRepository.CrearAsync(cita);
             }, IsolationLevel.Serializable);
 
+            await RegistrarActividadAsync(
+                creada.Id,
+                creada.IdClinica,
+                creada.IdSucursal,
+                idUsuarioEjecutor,
+                string.IsNullOrWhiteSpace(rolEjecutor) ? "Sistema" : rolEjecutor!,
+                "agendar",
+                $"Cita interna creada para paciente #{creada.IdPaciente} ({creada.FechaHoraInicioPlan:yyyy-MM-dd HH:mm}).");
+
+            await _doctorNotificationService.NotifyAppointmentUpdatedAsync(
+                creada.IdClinica,
+                creada.IdSucursal,
+                creada.Id,
+                "cita-creada",
+                "Nueva cita interna registrada.");
+
             return MapToResponseDto(creada);
         }
 
@@ -580,6 +637,46 @@ namespace Clynic.Application.Services
 
             var citas = await _citaRepository.ObtenerPorClinicaAsync(idClinica, fechaDesde, fechaHasta, idSucursal, estado);
             return citas.Select(MapToResponseDto);
+        }
+
+        public async Task<IEnumerable<CitaResponseDto>> ObtenerColaDoctorAsync(int idClinica, int idDoctor, int? idSucursal = null)
+        {
+            if (idClinica <= 0)
+            {
+                throw new ArgumentException("El ID de la clínica debe ser mayor a cero.", nameof(idClinica));
+            }
+
+            if (idDoctor <= 0)
+            {
+                throw new ArgumentException("El ID del doctor debe ser mayor a cero.", nameof(idDoctor));
+            }
+
+            var doctor = await _usuarioRepository.ObtenerPorIdAsync(idDoctor)
+                ?? throw new KeyNotFoundException("No se encontró el doctor autenticado.");
+
+            if (!doctor.Activo || doctor.IdClinica != idClinica || !EsProfesionalRol(doctor.Rol?.Nombre))
+            {
+                throw new UnauthorizedAccessException("No tienes permisos para consultar esta cola.");
+            }
+
+            if (!doctor.IdEspecialidad.HasValue)
+            {
+                return Array.Empty<CitaResponseDto>();
+            }
+
+            var hoy = DateTime.Today;
+            var manana = hoy.AddDays(1).AddTicks(-1);
+
+            var citas = await _citaRepository.ObtenerPorClinicaAsync(idClinica, hoy, manana, idSucursal, null);
+
+            return citas
+                .Where(c =>
+                    c.IdEspecialidad == doctor.IdEspecialidad.Value
+                    && (c.Estado == EstadoCita.Presente || c.Estado == EstadoCita.EnConsulta)
+                    && (!c.IdDoctor.HasValue || c.IdDoctor.Value == idDoctor))
+                .OrderBy(c => c.FechaHoraInicioPlan)
+                .Select(MapToResponseDto)
+                .ToArray();
         }
 
         public async Task<CitaResponseDto?> AsignarDoctorAsync(int idCita, AsignarDoctorCitaDto dto)
@@ -628,6 +725,17 @@ namespace Clynic.Application.Services
 
             var actualizada = await _citaRepository.ActualizarAsync(cita);
 
+            await RegistrarActividadAsync(
+                actualizada.Id,
+                actualizada.IdClinica,
+                actualizada.IdSucursal,
+                null,
+                "Sistema",
+                "asignar-doctor",
+                actualizada.IdDoctor.HasValue
+                    ? $"Doctor #{actualizada.IdDoctor} asignado a la cita."
+                    : "Doctor removido de la cita.");
+
             if (idDoctorAnterior.HasValue && (!cita.IdDoctor.HasValue || cita.IdDoctor.Value != idDoctorAnterior.Value))
             {
                 await _doctorNotificationService.NotifyQueueUpdatedAsync(
@@ -645,6 +753,13 @@ namespace Clynic.Application.Services
                     "doctor-asignado",
                     "Recepcion te asigno un paciente.");
             }
+
+            await _doctorNotificationService.NotifyAppointmentUpdatedAsync(
+                actualizada.IdClinica,
+                actualizada.IdSucursal,
+                actualizada.Id,
+                "cita-actualizada",
+                "Se actualizó la asignación de la cita.");
 
             return MapToResponseDto(actualizada);
         }
@@ -672,9 +787,33 @@ namespace Clynic.Application.Services
                 return null;
             }
 
+            Usuario? doctorEjecutor = null;
+
             if (EsProfesionalRol(rolEjecutor))
             {
-                if (!cita.IdDoctor.HasValue || cita.IdDoctor.Value != idUsuarioEjecutor)
+                doctorEjecutor = await _usuarioRepository.ObtenerPorIdAsync(idUsuarioEjecutor)
+                    ?? throw new UnauthorizedAccessException("No se pudo validar el doctor autenticado.");
+
+                if (!doctorEjecutor.Activo || doctorEjecutor.IdClinica != cita.IdClinica)
+                {
+                    throw new UnauthorizedAccessException("No tienes permisos para cambiar el estado de esta cita.");
+                }
+
+                if (!doctorEjecutor.IdEspecialidad.HasValue || doctorEjecutor.IdEspecialidad.Value != cita.IdEspecialidad)
+                {
+                    throw new UnauthorizedAccessException("Solo el doctor de la especialidad de la cita puede gestionarla.");
+                }
+
+                var esTomaInicial =
+                    !cita.IdDoctor.HasValue
+                    && cita.Estado == EstadoCita.Presente
+                    && dto.NuevoEstado == EstadoCita.EnConsulta;
+
+                if (esTomaInicial)
+                {
+                    cita.IdDoctor = idUsuarioEjecutor;
+                }
+                else if (!cita.IdDoctor.HasValue || cita.IdDoctor.Value != idUsuarioEjecutor)
                 {
                     throw new UnauthorizedAccessException("Solo el doctor asignado puede cambiar el estado de esta cita.");
                 }
@@ -731,6 +870,37 @@ namespace Clynic.Application.Services
 
             var actualizada = await _citaRepository.ActualizarAsync(cita);
 
+            await RegistrarActividadAsync(
+                actualizada.Id,
+                actualizada.IdClinica,
+                actualizada.IdSucursal,
+                idUsuarioEjecutor,
+                string.IsNullOrWhiteSpace(rolEjecutor) ? "Sistema" : rolEjecutor,
+                dto.NuevoEstado == EstadoCita.Cancelada ? "cancelar" : "editar-estado",
+                $"Estado actualizado a {dto.NuevoEstado}.");
+
+            if (dto.NuevoEstado == EstadoCita.Cancelada)
+            {
+                var sucursalNombre = actualizada.Sucursal?.Nombre ?? $"Sucursal #{actualizada.IdSucursal}";
+                var nombrePaciente = actualizada.Paciente != null
+                    ? $"{actualizada.Paciente.Nombres} {actualizada.Paciente.Apellidos}".Trim()
+                    : "Paciente";
+
+                try
+                {
+                    await _emailService.EnviarNotificacionCitaCanceladaAsync(
+                        actualizada.Paciente?.Correo ?? string.Empty,
+                        nombrePaciente,
+                        "Clínica",
+                        sucursalNombre,
+                        actualizada.FechaHoraInicioPlan,
+                        dto.NotasOperacion);
+                }
+                catch
+                {
+                }
+            }
+
             if (actualizada.IdDoctor.HasValue)
             {
                 var evento = dto.NuevoEstado switch
@@ -748,6 +918,13 @@ namespace Clynic.Application.Services
                     evento,
                     $"La cita #{actualizada.Id} cambio a estado {actualizada.Estado}.");
             }
+
+            await _doctorNotificationService.NotifyAppointmentUpdatedAsync(
+                actualizada.IdClinica,
+                actualizada.IdSucursal,
+                actualizada.Id,
+                "estado-actualizado",
+                $"La cita #{actualizada.Id} cambió a estado {actualizada.Estado}.");
 
             return MapToResponseDto(actualizada);
         }
@@ -851,7 +1028,182 @@ namespace Clynic.Application.Services
 
             await _citaRepository.ActualizarAsync(cita);
 
+            await RegistrarActividadAsync(
+                cita.Id,
+                cita.IdClinica,
+                cita.IdSucursal,
+                idDoctorEjecutor,
+                "Doctor",
+                "registrar-consulta",
+                "Consulta médica registrada.");
+
+            await _doctorNotificationService.NotifyAppointmentUpdatedAsync(
+                cita.IdClinica,
+                cita.IdSucursal,
+                cita.Id,
+                "consulta-registrada",
+                $"Consulta registrada para cita #{cita.Id}.");
+
             return MapConsultaToResponseDto(consultaCreada);
+        }
+
+        public async Task<CitaResponseDto?> ReprogramarAsync(int idCita, ReprogramarCitaDto dto, string rolEjecutor, int idUsuarioEjecutor)
+        {
+            if (idCita <= 0)
+            {
+                throw new ArgumentException("El ID de la cita debe ser mayor a cero.", nameof(idCita));
+            }
+
+            if (idUsuarioEjecutor <= 0)
+            {
+                throw new ArgumentException("El ID del usuario ejecutor debe ser mayor a cero.", nameof(idUsuarioEjecutor));
+            }
+
+            if (dto == null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            if (!EsRol(rolEjecutor, "Admin") && !EsRol(rolEjecutor, "Recepcionista"))
+            {
+                throw new UnauthorizedAccessException("Solo admin o recepción pueden reprogramar citas.");
+            }
+
+            var cita = await _citaRepository.ObtenerPorIdAsync(idCita);
+            if (cita == null)
+            {
+                return null;
+            }
+
+            if (cita.Estado == EstadoCita.Cancelada || cita.Estado == EstadoCita.Completada)
+            {
+                throw new InvalidOperationException("No se puede reprogramar una cita cancelada o completada.");
+            }
+
+            var duracion = Math.Max(1, CalcularDuracionTotalMin(cita.CitaServicios.Select(s => s.DuracionMin)));
+            var nuevaFechaInicio = dto.NuevaFechaHoraInicioPlan;
+            var nuevaFechaFin = nuevaFechaInicio.AddMinutes(duracion);
+
+            await ValidarCapacidadSucursalAsync(
+                cita.IdClinica,
+                cita.IdSucursal,
+                cita.IdEspecialidad,
+                nuevaFechaInicio,
+                duracion,
+                cita.Id);
+
+            var duplicadoPaciente = await _citaRepository.ExisteTraslapePacienteAsync(
+                cita.IdClinica,
+                cita.IdPaciente,
+                nuevaFechaInicio,
+                nuevaFechaFin,
+                cita.Id);
+
+            if (duplicadoPaciente)
+            {
+                throw new ValidationException("El paciente ya tiene otra cita activa en ese horario.");
+            }
+
+            var idDoctorFinal = dto.IdDoctor ?? cita.IdDoctor;
+            if (idDoctorFinal.HasValue)
+            {
+                var doctorTieneTraslape = await _citaRepository.ExisteTraslapeHorarioDoctorAsync(
+                    cita.IdClinica,
+                    cita.IdSucursal,
+                    idDoctorFinal.Value,
+                    nuevaFechaInicio,
+                    nuevaFechaFin,
+                    cita.Id);
+
+                if (doctorTieneTraslape)
+                {
+                    throw new ValidationException("El doctor seleccionado tiene un traslape en el nuevo horario.");
+                }
+
+                cita.IdDoctor = idDoctorFinal;
+            }
+
+            var fechaAnterior = cita.FechaHoraInicioPlan;
+            cita.FechaHoraInicioPlan = nuevaFechaInicio;
+            cita.FechaHoraFinPlan = nuevaFechaFin;
+            cita.Estado = EstadoCita.Confirmada;
+
+            if (!string.IsNullOrWhiteSpace(dto.Motivo))
+            {
+                var motivo = dto.Motivo.Trim();
+                cita.Notas = string.IsNullOrWhiteSpace(cita.Notas)
+                    ? $"Reprogramación: {motivo}"
+                    : $"{cita.Notas} | Reprogramación: {motivo}";
+            }
+
+            var actualizada = await _citaRepository.ActualizarAsync(cita);
+
+            await RegistrarActividadAsync(
+                actualizada.Id,
+                actualizada.IdClinica,
+                actualizada.IdSucursal,
+                idUsuarioEjecutor,
+                rolEjecutor,
+                "reprogramar",
+                $"Cita reprogramada de {fechaAnterior:yyyy-MM-dd HH:mm} a {nuevaFechaInicio:yyyy-MM-dd HH:mm}.");
+
+            try
+            {
+                var sucursalNombre = actualizada.Sucursal?.Nombre ?? $"Sucursal #{actualizada.IdSucursal}";
+                var nombrePaciente = actualizada.Paciente != null
+                    ? $"{actualizada.Paciente.Nombres} {actualizada.Paciente.Apellidos}".Trim()
+                    : "Paciente";
+
+                await _emailService.EnviarNotificacionCitaReprogramadaAsync(
+                    actualizada.Paciente?.Correo ?? string.Empty,
+                    nombrePaciente,
+                    "Clínica",
+                    sucursalNombre,
+                    fechaAnterior,
+                    nuevaFechaInicio,
+                    nuevaFechaFin,
+                    dto.Motivo);
+            }
+            catch
+            {
+            }
+
+            await _doctorNotificationService.NotifyAppointmentUpdatedAsync(
+                actualizada.IdClinica,
+                actualizada.IdSucursal,
+                actualizada.Id,
+                "cita-reprogramada",
+                $"Cita #{actualizada.Id} reprogramada.");
+
+            return MapToResponseDto(actualizada);
+        }
+
+        public async Task<IReadOnlyCollection<CitaActividadResponseDto>> ObtenerActividadPorClinicaAsync(
+            int idClinica,
+            DateTime? fechaDesde = null,
+            DateTime? fechaHasta = null,
+            int maxResultados = 100)
+        {
+            if (idClinica <= 0)
+            {
+                throw new ArgumentException("El ID de la clínica debe ser mayor a cero.", nameof(idClinica));
+            }
+
+            var data = await _citaActividadRepository.ObtenerPorClinicaAsync(idClinica, fechaDesde, fechaHasta, maxResultados);
+            return data
+                .Select(a => new CitaActividadResponseDto
+                {
+                    Id = a.Id,
+                    IdCita = a.IdCita,
+                    IdClinica = a.IdClinica,
+                    IdSucursal = a.IdSucursal,
+                    IdUsuario = a.IdUsuario,
+                    RolUsuario = a.RolUsuario,
+                    Accion = a.Accion,
+                    Detalle = a.Detalle,
+                    FechaCreacion = a.FechaCreacion,
+                })
+                .ToArray();
         }
 
         private static bool EsTransicionPermitida(EstadoCita estadoActual, EstadoCita estadoNuevo, string rolEjecutor)
@@ -870,10 +1222,9 @@ namespace Clynic.Application.Services
             {
                 "recepcionista" =>
                     (estadoActual == EstadoCita.Pendiente || estadoActual == EstadoCita.Confirmada) && estadoNuevo == EstadoCita.Presente
-                    || estadoActual == EstadoCita.Presente && estadoNuevo == EstadoCita.EnConsulta
                     || estadoActual == EstadoCita.EnConsulta && estadoNuevo == EstadoCita.Completada
                     || (estadoActual == EstadoCita.Pendiente || estadoActual == EstadoCita.Confirmada || estadoActual == EstadoCita.Presente) && estadoNuevo == EstadoCita.Cancelada,
-                "doctor" or "nutricionista" or "fisioterapeuta" =>
+                "doctor" =>
                     estadoActual == EstadoCita.Presente && estadoNuevo == EstadoCita.EnConsulta,
                 _ => false
             };
@@ -942,7 +1293,8 @@ namespace Clynic.Application.Services
             int idSucursal,
             int idEspecialidad,
             DateTime fechaHoraInicio,
-            int duracionEstimadaMin)
+            int duracionEstimadaMin,
+            int? idCitaExcluir = null)
         {
             var config = await _sucursalEspecialidadRepository.ObtenerConfiguracionActivaAsync(idSucursal, idEspecialidad);
             if (config == null)
@@ -971,7 +1323,8 @@ namespace Clynic.Application.Services
                 idClinica,
                 idSucursal,
                 idEspecialidad,
-                fechaHoraInicio.Date);
+                fechaHoraInicio.Date,
+                idCitaExcluir);
 
             if (capacidadMaximaDia <= 0 || citasDia >= capacidadMaximaDia)
             {
@@ -986,7 +1339,8 @@ namespace Clynic.Application.Services
                 idSucursal,
                 idEspecialidad,
                 inicio,
-                fin);
+                fin,
+                idCitaExcluir);
 
             if (traslapes >= totalDoctoresEspecialidad)
             {
@@ -1055,7 +1409,7 @@ namespace Clynic.Application.Services
         private static bool EsProfesionalRol(string? rol)
         {
             var normalizado = NormalizarRol(rol);
-            return normalizado is "doctor" or "nutricionista" or "fisioterapeuta";
+            return normalizado is "doctor";
         }
 
         private static string NormalizarRol(string? rol)
@@ -1072,6 +1426,28 @@ namespace Clynic.Application.Services
         private static int MapearDiaSemana(DateTime fecha)
         {
             return fecha.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)fecha.DayOfWeek;
+        }
+
+        private async Task RegistrarActividadAsync(
+            int idCita,
+            int idClinica,
+            int idSucursal,
+            int? idUsuario,
+            string rolUsuario,
+            string accion,
+            string detalle)
+        {
+            await _citaActividadRepository.CrearAsync(new CitaActividad
+            {
+                IdCita = idCita,
+                IdClinica = idClinica,
+                IdSucursal = idSucursal,
+                IdUsuario = idUsuario,
+                RolUsuario = string.IsNullOrWhiteSpace(rolUsuario) ? "Sistema" : rolUsuario.Trim(),
+                Accion = string.IsNullOrWhiteSpace(accion) ? "editar" : accion.Trim(),
+                Detalle = string.IsNullOrWhiteSpace(detalle) ? "Sin detalle" : detalle.Trim(),
+                FechaCreacion = DateTime.UtcNow,
+            });
         }
     }
 }
